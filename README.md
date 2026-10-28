@@ -158,6 +158,39 @@ curl -X POST http://localhost:18610/v1/chat/completions \
   }'
 ```
 
+### OpenCode
+
+Add muse2api as a custom provider in `~/.config/opencode/opencode.jsonc`. The `modalities` block is required — without it OpenCode strips image parts before sending:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "muse2api": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Muse2API",
+      "options": {
+        "baseURL": "http://localhost:18610/v1",
+        "apiKey": "m2a_your_key"
+      },
+      "models": {
+        "muse-spark": {
+          "name": "Muse Spark",
+          "attachment": true,
+          "tool_call": false,
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+`tool_call` is set to `false` because muse.ai's assistant does not emit tool-call JSON; use OpenCode's plan/ask mode rather than agent mode. Images attach via paste or drag-drop in the TUI.
+
 ### Responses API
 
 ```bash
