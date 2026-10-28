@@ -24,7 +24,7 @@ func TestChatQueueDeadline(t *testing.T) {
 	parent, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	start := time.Now()
-	err = s.streamChatReal(parent, "test", 30*time.Millisecond, func(string) error { return nil })
+	err = s.streamChatReal(parent, "test", nil, 30*time.Millisecond, func(string) error { return nil })
 	if !errors.Is(err, context.DeadlineExceeded) || time.Since(start) > 300*time.Millisecond {
 		t.Fatalf("chat queue deadline: %v (%v)", err, time.Since(start))
 	}

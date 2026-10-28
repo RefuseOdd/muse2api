@@ -14,7 +14,7 @@ import (
 
 func TestChatNonStreaming(t *testing.T) {
 	s, _ := newTestServer(t, "")
-	s.streamChatFn = func(ctx context.Context, prompt string, timeout time.Duration, emit func(string) error) error {
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
 		if !strings.Contains(prompt, "hello") {
 			t.Fatalf("prompt not forwarded: %s", prompt)
 		}
@@ -44,7 +44,7 @@ func TestChatNonStreaming(t *testing.T) {
 
 func TestChatStreaming(t *testing.T) {
 	s, _ := newTestServer(t, "")
-	s.streamChatFn = func(ctx context.Context, prompt string, timeout time.Duration, emit func(string) error) error {
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
 		if err := emit("Hi"); err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func TestChatStreaming(t *testing.T) {
 func TestChatToolProtocol(t *testing.T) {
 	s, cfg := newTestServer(t, "")
 	cfg.ToolProtocol = true
-	s.streamChatFn = func(ctx context.Context, prompt string, timeout time.Duration, emit func(string) error) error {
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
 		if !strings.Contains(prompt, "get_weather") {
 			t.Fatalf("tool definitions were not injected: %s", prompt)
 		}
@@ -126,7 +126,7 @@ func TestChatToolProtocol(t *testing.T) {
 
 func TestResponsesStreaming(t *testing.T) {
 	s, _ := newTestServer(t, "")
-	s.streamChatFn = func(ctx context.Context, prompt string, timeout time.Duration, emit func(string) error) error {
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
 		return emit("response text")
 	}
 	raw, _ := json.Marshal(map[string]any{"input": "hello", "stream": true})
@@ -198,5 +198,70 @@ func TestVideoTaskFlow(t *testing.T) {
 	}
 	if polled.Video.URL == "" || polled.Result.Bytes != 12345 || polled.Result.URL != polled.URL {
 		t.Fatalf("video fields missing: %s", rec.Body.String())
+	}
+}
+
+func TestChatImageAttachments(t *testing.T) {
+	s, _ := newTestServer(t, "")
+	png := "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+	var got []string
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
+		got = images
+		if !strings.Contains(prompt, "screenshot") {
+			t.Fatalf("prompt not forwarded: %s", prompt)
+		}
+		if !strings.Contains(prompt, "[1 image(s) are attached with this message.]") {
+			t.Fatalf("attachment note missing: %s", prompt)
+		}
+		return emit("I see it")
+	}
+	rec := doRequest(t, s, http.MethodPost, "/v1/chat/completions", map[string]any{
+		"messages": []any{map[string]any{"role": "user", "content": []any{
+			map[string]any{"type": "text", "text": "what is in this screenshot"},
+			map[string]any{"type": "image_url", "image_url": map[string]any{"url": png}},
+		}}},
+	}, true)
+	if rec.Code != 200 {
+		t.Fatalf("chat with image: %d %s", rec.Code, rec.Body.String())
+	}
+	if len(got) != 1 || got[0] != png {
+		t.Fatalf("prepared image not forwarded: %#v", got)
+	}
+
+	s2, _ := newTestServer(t, "")
+	var gotPrompt string
+	s2.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
+		gotPrompt = prompt
+		if len(images) != 1 {
+			t.Fatalf("expected 1 image, got %d", len(images))
+		}
+		return emit("done")
+	}
+	rec2 := doRequest(t, s2, http.MethodPost, "/v1/chat/completions", map[string]any{
+		"messages": []any{map[string]any{"role": "user", "content": []any{
+			map[string]any{"type": "image_url", "image_url": png},
+		}}},
+	}, true)
+	if rec2.Code != 200 {
+		t.Fatalf("image-only chat: %d %s", rec2.Code, rec2.Body.String())
+	}
+	if !strings.Contains(gotPrompt, "Respond to the 1 attached image(s).") {
+		t.Fatalf("image-only prompt not synthesized: %s", gotPrompt)
+	}
+}
+
+func TestChatImageAttachmentInvalid(t *testing.T) {
+	s, _ := newTestServer(t, "")
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
+		t.Fatal("stream must not run when image validation fails")
+		return nil
+	}
+	rec := doRequest(t, s, http.MethodPost, "/v1/chat/completions", map[string]any{
+		"messages": []any{map[string]any{"role": "user", "content": []any{
+			map[string]any{"type": "image_url", "image_url": "file:///etc/passwd"},
+		}}},
+	}, true)
+	if rec.Code != 400 {
+		t.Fatalf("expected 400 for local file image, got %d %s", rec.Code, rec.Body.String())
 	}
 }

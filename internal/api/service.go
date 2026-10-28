@@ -37,7 +37,7 @@ type Server struct {
 
 	// Test seams. Production leaves these nil.
 	runGenerationFn func(ctx context.Context, prompt, kind string, timeout time.Duration, accountID string, onProgress func(int), referenceImages []string, onAcquired func()) (*engine.GenResult, string, error)
-	streamChatFn    func(ctx context.Context, prompt string, timeout time.Duration, emit func(string) error) error
+	streamChatFn    func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error
 	renewSessionFn  func(ctx context.Context, cookies map[string]string, expires map[string]int64, wakeVM bool) (*engine.SessionRenewResult, error)
 }
 
@@ -460,14 +460,14 @@ func (s *Server) runGenerationReal(ctx context.Context, prompt, kind string, tim
 
 // StreamChat runs one chat turn, emitting incremental text. It retries with a
 // backup account only if nothing has been emitted yet.
-func (s *Server) StreamChat(ctx context.Context, prompt string, timeout time.Duration, emit func(string) error) error {
+func (s *Server) StreamChat(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
 	if s.streamChatFn != nil {
-		return s.streamChatFn(ctx, prompt, timeout, emit)
+		return s.streamChatFn(ctx, prompt, images, timeout, emit)
 	}
-	return s.streamChatReal(ctx, prompt, timeout, emit)
+	return s.streamChatReal(ctx, prompt, images, timeout, emit)
 }
 
-func (s *Server) streamChatReal(ctx context.Context, prompt string, timeout time.Duration, emit func(string) error) error {
+func (s *Server) streamChatReal(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
 	if timeout <= 0 {
 		timeout = time.Duration(s.cfg.ChatTimeout) * time.Second
 	}
@@ -542,7 +542,7 @@ func (s *Server) streamChatReal(ctx context.Context, prompt string, timeout time
 			yielded = true
 			return emit(chunk)
 		}
-		cerr := w.ChatStream(ctx, cur.Cookies, prompt, cur.CookiesExp, time.Until(deadline), cur.ID, emitWithFlag)
+		cerr := w.ChatStream(ctx, cur.Cookies, prompt, cur.CookiesExp, time.Until(deadline), cur.ID, images, emitWithFlag)
 		if cerr == nil {
 			if err := s.markAccount(cur, boolPtr(true), ""); err != nil {
 				return err

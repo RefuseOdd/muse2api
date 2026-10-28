@@ -194,3 +194,34 @@ func TestVersionAndRepoHelpers(t *testing.T) {
 		t.Fatalf("empty repo must disable updates")
 	}
 }
+
+func TestChatContentImages(t *testing.T) {
+	png := "data:image/png;base64,AAAA"
+	msgs := []ChatMessage{
+		{Role: "user", Content: "plain text only"},
+		{Role: "user", Content: []any{
+			map[string]any{"type": "text", "text": "look at this"},
+			map[string]any{"type": "image_url", "image_url": png},
+		}},
+		{Role: "user", Content: []any{
+			map[string]any{"type": "image_url", "image_url": map[string]any{"url": "https://example.com/a.png"}},
+			map[string]any{"type": "input_image", "image_url": "https://example.com/b.png"},
+			map[string]any{"type": "image_url", "image_url": map[string]any{"b64_json": png}},
+			map[string]any{"type": "image_url", "b64_json": png},
+			map[string]any{"type": "text", "text": "and this"},
+		}},
+	}
+	got := chatContentImages(msgs)
+	want := []string{png, "https://example.com/a.png", "https://example.com/b.png", png, png}
+	if len(got) != len(want) {
+		t.Fatalf("expected %d images, got %d: %#v", len(want), len(got), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("image[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+	if imgs := chatContentImages([]ChatMessage{{Role: "user", Content: "no images here"}}); len(imgs) != 0 {
+		t.Fatalf("string content must yield no images: %#v", imgs)
+	}
+}

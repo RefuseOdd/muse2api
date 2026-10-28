@@ -19,6 +19,7 @@ The entire service is **one static Go binary with zero third-party Go modules**.
 - **Multi-account pool**: isolated incognito browser contexts per task, exclusive account leases, affinity and automatic failover.
 - **Session maintenance**: HTTP `/api/session` renewal, VM wake verification and a 15-minute keepalive daemon.
 - **Reference image safety**: up to four ordered references, 10 MiB each / 24 MiB total; server-local paths and private URLs are denied by default, with DNS/redirect revalidation and pinned connections for public URLs.
+- **Chat image input**: `image_url` parts in `/v1/chat/completions` and `input_image` items in `/v1/responses` upload into the muse.ai composer (data URLs or public URLs; same limits as reference images).
 - **Async image tasks** with idempotency keys, a queue admission cap and restart recovery.
 - **English-only** UI, prompts, docs and tools. A few bilingual DOM selector and quota-parser tokens remain because the live muse.ai interface and usage panel can be localized; they are not user-facing text.
 
@@ -141,6 +142,21 @@ curl -X POST http://localhost:18610/v1/chat/completions \
 ```
 
 Streaming uses standard SSE chunks and terminates with `data: [DONE]`.
+
+Multimodal messages are supported: `image_url` content parts (data URLs or public URLs, up to four images with the same 10 MiB/24 MiB limits as reference images) are uploaded into the muse.ai composer before the prompt is sent.
+
+```bash
+curl -X POST http://localhost:18610/v1/chat/completions \
+  -H "Authorization: Bearer m2a_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "muse-spark",
+    "messages": [{"role": "user", "content": [
+      {"type": "text", "text": "What does this screenshot show?"},
+      {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}}
+    ]}]
+  }'
+```
 
 ### Responses API
 

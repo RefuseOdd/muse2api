@@ -27,11 +27,19 @@ func (w *Worker) pollChat() (int, string, bool) {
 }
 
 // ChatStream sends one prompt and emits incremental assistant text.
-func (w *Worker) ChatStream(ctx context.Context, cookies map[string]string, prompt string, expires map[string]int64, timeout time.Duration, accountID string, emit func(string) error) error {
+func (w *Worker) ChatStream(ctx context.Context, cookies map[string]string, prompt string, expires map[string]int64, timeout time.Duration, accountID string, images []string, emit func(string) error) error {
 	if _, err := w.EnsurePage(ctx, cookies, expires, accountID); err != nil {
 		return err
 	}
 	w.ResetThread(ctx, true)
+	refs := append([]string{}, images...)
+	if len(refs) > 0 {
+		if err := w.AttachImages(refs); err != nil {
+			return err
+		}
+	} else {
+		w.clearAttachments()
+	}
 	baseAgent, baseText, _ := w.pollChat()
 	if _, err := w.send(prompt); err != nil {
 		return err

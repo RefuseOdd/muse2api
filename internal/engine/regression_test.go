@@ -138,7 +138,7 @@ func TestChatWaitsThroughOutputPause(t *testing.T) {
 	var text string
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err = w.ChatStream(ctx, nil, "test", nil, 9*time.Second, "test", func(chunk string) error { text += chunk; return nil })
+	err = w.ChatStream(ctx, nil, "test", nil, 9*time.Second, "test", nil, func(chunk string) error { text += chunk; return nil })
 	if err != nil || text != "partial complete" {
 		t.Fatalf("chat truncated during active pause: %q %v", text, err)
 	}

@@ -222,6 +222,34 @@ func contentText(content any) string {
 	}
 }
 
+func chatContentImages(messages []ChatMessage) []string {
+	var images []string
+	for _, m := range messages {
+		parts, ok := m.Content.([]any)
+		if !ok {
+			continue
+		}
+		for _, item := range parts {
+			it, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			typ, _ := it["type"].(string)
+			if typ != "image_url" && typ != "input_image" {
+				continue
+			}
+			ref := imageValue(it["image_url"])
+			if ref == "" {
+				ref = imageValue(it)
+			}
+			if ref != "" {
+				images = append(images, ref)
+			}
+		}
+	}
+	return images
+}
+
 func buildChatPrompt(messages []ChatMessage) string {
 	var system []string
 	type turn struct {
