@@ -1,13 +1,20 @@
 package engine
 
 const (
-	// AttachmentSelector matches the generated media presentation containers.
-	AttachmentSelector = `[data-testid^="hatch-chat-attachment-presentation-"]`
-
 	MaxReferenceImages     = 4
 	MaxReferenceImageBytes = 10 * 1024 * 1024
 	MaxReferenceTotalBytes = 24 * 1024 * 1024
+
+	MaxChatFiles     = 4
+	MaxChatFileBytes = 100 * 1024 * 1024
 )
+
+type ChatFile struct {
+	Name     string `json:"name"`
+	Filename string `json:"filename"`
+	Size     int64  `json:"size"`
+	MIME     string `json:"mime"`
+}
 
 // EssentialCookies are the only cookies that determine whether an account can
 // be used. hatch_gw is optional and must never block an import.

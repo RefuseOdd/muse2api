@@ -14,11 +14,11 @@ import (
 
 func TestChatNonStreaming(t *testing.T) {
 	s, _ := newTestServer(t, "")
-	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error) {
 		if !strings.Contains(prompt, "hello") {
 			t.Fatalf("prompt not forwarded: %s", prompt)
 		}
-		return emit("Hello from the fake model")
+		return nil, emit("Hello from the fake model")
 	}
 	rec := doRequest(t, s, http.MethodPost, "/v1/chat/completions", map[string]any{
 		"model":    "gpt-4o",
@@ -44,11 +44,11 @@ func TestChatNonStreaming(t *testing.T) {
 
 func TestChatStreaming(t *testing.T) {
 	s, _ := newTestServer(t, "")
-	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error) {
 		if err := emit("Hi"); err != nil {
-			return err
+			return nil, err
 		}
-		return emit(" there")
+		return nil, emit(" there")
 	}
 	reqBody := map[string]any{
 		"messages":       []any{map[string]any{"role": "user", "content": "hello"}},
@@ -81,11 +81,11 @@ func TestChatStreaming(t *testing.T) {
 func TestChatToolProtocol(t *testing.T) {
 	s, cfg := newTestServer(t, "")
 	cfg.ToolProtocol = true
-	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error) {
 		if !strings.Contains(prompt, "get_weather") {
 			t.Fatalf("tool definitions were not injected: %s", prompt)
 		}
-		return emit("```json\n{\"name\":\"get_weather\",\"arguments\":{\"city\":\"Paris\"}}\n```")
+		return nil, emit("```json\n{\"name\":\"get_weather\",\"arguments\":{\"city\":\"Paris\"}}\n```")
 	}
 	rec := doRequest(t, s, http.MethodPost, "/v1/chat/completions", map[string]any{
 		"messages": []any{map[string]any{"role": "user", "content": "weather?"}},
@@ -126,8 +126,8 @@ func TestChatToolProtocol(t *testing.T) {
 
 func TestResponsesStreaming(t *testing.T) {
 	s, _ := newTestServer(t, "")
-	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
-		return emit("response text")
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error) {
+		return nil, emit("response text")
 	}
 	raw, _ := json.Marshal(map[string]any{"input": "hello", "stream": true})
 	req, _ := http.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(string(raw)))
@@ -205,7 +205,7 @@ func TestChatImageAttachments(t *testing.T) {
 	s, _ := newTestServer(t, "")
 	png := "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
 	var got []string
-	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error) {
 		got = images
 		if !strings.Contains(prompt, "screenshot") {
 			t.Fatalf("prompt not forwarded: %s", prompt)
@@ -213,7 +213,7 @@ func TestChatImageAttachments(t *testing.T) {
 		if !strings.Contains(prompt, "[1 image(s) are attached with this message.]") {
 			t.Fatalf("attachment note missing: %s", prompt)
 		}
-		return emit("I see it")
+		return nil, emit("I see it")
 	}
 	rec := doRequest(t, s, http.MethodPost, "/v1/chat/completions", map[string]any{
 		"messages": []any{map[string]any{"role": "user", "content": []any{
@@ -230,12 +230,12 @@ func TestChatImageAttachments(t *testing.T) {
 
 	s2, _ := newTestServer(t, "")
 	var gotPrompt string
-	s2.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
+	s2.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error) {
 		gotPrompt = prompt
 		if len(images) != 1 {
 			t.Fatalf("expected 1 image, got %d", len(images))
 		}
-		return emit("done")
+		return nil, emit("done")
 	}
 	rec2 := doRequest(t, s2, http.MethodPost, "/v1/chat/completions", map[string]any{
 		"messages": []any{map[string]any{"role": "user", "content": []any{
@@ -252,9 +252,9 @@ func TestChatImageAttachments(t *testing.T) {
 
 func TestChatImageAttachmentInvalid(t *testing.T) {
 	s, _ := newTestServer(t, "")
-	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error) {
 		t.Fatal("stream must not run when image validation fails")
-		return nil
+		return nil, nil
 	}
 	rec := doRequest(t, s, http.MethodPost, "/v1/chat/completions", map[string]any{
 		"messages": []any{map[string]any{"role": "user", "content": []any{
@@ -263,5 +263,54 @@ func TestChatImageAttachmentInvalid(t *testing.T) {
 	}, true)
 	if rec.Code != 400 {
 		t.Fatalf("expected 400 for local file image, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestChatFileAttachments(t *testing.T) {
+	s, _ := newTestServer(t, "")
+	s.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error) {
+		return []engine.ChatFile{{Name: "report.txt", Filename: "abc123.txt", Size: 19, MIME: "text/plain"}}, emit("here you go")
+	}
+	rec := doRequest(t, s, http.MethodPost, "/v1/chat/completions", map[string]any{
+		"messages": []any{map[string]any{"role": "user", "content": "make the file"}},
+	}, true)
+	if rec.Code != 200 {
+		t.Fatalf("chat with file: %d %s", rec.Code, rec.Body.String())
+	}
+	var resp struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	decodeJSON(t, rec, &resp)
+	content := resp.Choices[0].Message.Content
+	if !strings.Contains(content, "here you go") {
+		t.Fatalf("text missing: %s", content)
+	}
+	if !strings.Contains(content, "[report.txt](/v1/media/abc123.txt)") {
+		t.Fatalf("attachment link missing: %s", content)
+	}
+
+	s2, _ := newTestServer(t, "")
+	s2.streamChatFn = func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error) {
+		if err := emit("streaming"); err != nil {
+			return nil, err
+		}
+		return []engine.ChatFile{{Name: "data.csv", Filename: "def456.csv", Size: 5, MIME: "text/csv"}}, nil
+	}
+	rec2 := doRequest(t, s2, http.MethodPost, "/v1/chat/completions", map[string]any{
+		"messages": []any{map[string]any{"role": "user", "content": "make csv"}},
+		"stream":   true,
+	}, true)
+	if rec2.Code != 200 {
+		t.Fatalf("stream with file: %d %s", rec2.Code, rec2.Body.String())
+	}
+	body := rec2.Body.String()
+	for _, want := range []string{`Attached files: [data.csv](/v1/media/def456.csv)`, `[data.csv](/v1/media/def456.csv)`, `"finish_reason":"stop"`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("file stream missing %q:\n%s", want, body)
+		}
 	}
 }

@@ -37,7 +37,7 @@ type Server struct {
 
 	// Test seams. Production leaves these nil.
 	runGenerationFn func(ctx context.Context, prompt, kind string, timeout time.Duration, accountID string, onProgress func(int), referenceImages []string, onAcquired func()) (*engine.GenResult, string, error)
-	streamChatFn    func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error
+	streamChatFn    func(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error)
 	renewSessionFn  func(ctx context.Context, cookies map[string]string, expires map[string]int64, wakeVM bool) (*engine.SessionRenewResult, error)
 }
 
@@ -460,14 +460,14 @@ func (s *Server) runGenerationReal(ctx context.Context, prompt, kind string, tim
 
 // StreamChat runs one chat turn, emitting incremental text. It retries with a
 // backup account only if nothing has been emitted yet.
-func (s *Server) StreamChat(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
+func (s *Server) StreamChat(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error) {
 	if s.streamChatFn != nil {
 		return s.streamChatFn(ctx, prompt, images, timeout, emit)
 	}
 	return s.streamChatReal(ctx, prompt, images, timeout, emit)
 }
 
-func (s *Server) streamChatReal(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) error {
+func (s *Server) streamChatReal(ctx context.Context, prompt string, images []string, timeout time.Duration, emit func(string) error) ([]engine.ChatFile, error) {
 	if timeout <= 0 {
 		timeout = time.Duration(s.cfg.ChatTimeout) * time.Second
 	}
@@ -476,7 +476,7 @@ func (s *Server) streamChatReal(ctx context.Context, prompt string, images []str
 	deadline, _ := ctx.Deadline()
 	w, err := s.eng.Acquire(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer s.eng.Release(w)
 
@@ -494,12 +494,12 @@ func (s *Server) streamChatReal(ctx context.Context, prompt string, images []str
 
 	for attempt := 0; attempt < 2; attempt++ {
 		if err := ctx.Err(); err != nil {
-			return err
+			return nil, err
 		}
 		if attempt == 0 {
 			acc, aerr := s.pool.Acquire(ctx, "", s.eng.PreferredAccount(), true, false, timeout, true)
 			if aerr != nil {
-				return aerr
+				return nil, aerr
 			}
 			cur = acc
 			curID = acc.ID
@@ -542,24 +542,24 @@ func (s *Server) streamChatReal(ctx context.Context, prompt string, images []str
 			yielded = true
 			return emit(chunk)
 		}
-		cerr := w.ChatStream(ctx, cur.Cookies, prompt, cur.CookiesExp, time.Until(deadline), cur.ID, images, emitWithFlag)
+		files, cerr := w.ChatStream(ctx, cur.Cookies, prompt, cur.CookiesExp, time.Until(deadline), cur.ID, images, emitWithFlag)
 		if cerr == nil {
 			if err := s.markAccount(cur, boolPtr(true), ""); err != nil {
-				return err
+				return nil, err
 			}
 			if _, err := s.syncWorkerCookies(cur.ID, w); err != nil {
-				return err
+				return nil, err
 			}
 			s.eng.SetPreferredAccount(cur.ID)
-			return nil
+			return files, nil
 		}
 		lastErr = cerr
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return nil, ctx.Err()
 		}
 		if engine.IsAuthError(cerr) {
 			if err := s.markAccount(cur, boolPtr(false), cerr.Error()); err != nil {
-				return err
+				return nil, err
 			}
 			w.ClosePage()
 			if yielded {
@@ -568,7 +568,7 @@ func (s *Server) streamChatReal(ctx context.Context, prompt string, images []str
 			continue
 		}
 		if err := s.markAccount(cur, boolPtr(true), truncateNote("Assistant timeout: "+cerr.Error(), 60)); err != nil {
-			return err
+			return nil, err
 		}
 		w.ClosePage()
 		if yielded {
@@ -576,9 +576,9 @@ func (s *Server) streamChatReal(ctx context.Context, prompt string, images []str
 		}
 	}
 	if lastErr != nil {
-		return lastErr
+		return nil, lastErr
 	}
-	return &engine.MuseGenerationError{Message: "chat generation failed"}
+	return nil, &engine.MuseGenerationError{Message: "chat generation failed"}
 }
 
 func boolPtr(v bool) *bool { return &v }

@@ -19,6 +19,7 @@ coverage.*
 /data/downloads/
 /data/media/*
 !/data/media/.gitkeep
+/data/muse-login-profile/
 
 # Local browser profiles
 /*-profiles/

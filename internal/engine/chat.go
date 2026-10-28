@@ -27,22 +27,23 @@ func (w *Worker) pollChat() (int, string, bool) {
 }
 
 // ChatStream sends one prompt and emits incremental assistant text.
-func (w *Worker) ChatStream(ctx context.Context, cookies map[string]string, prompt string, expires map[string]int64, timeout time.Duration, accountID string, images []string, emit func(string) error) error {
+func (w *Worker) ChatStream(ctx context.Context, cookies map[string]string, prompt string, expires map[string]int64, timeout time.Duration, accountID string, images []string, emit func(string) error) ([]ChatFile, error) {
 	if _, err := w.EnsurePage(ctx, cookies, expires, accountID); err != nil {
-		return err
+		return nil, err
 	}
 	w.ResetThread(ctx, true)
+	w.installBlobHook()
 	refs := append([]string{}, images...)
 	if len(refs) > 0 {
 		if err := w.AttachImages(refs); err != nil {
-			return err
+			return nil, err
 		}
 	} else {
 		w.clearAttachments()
 	}
 	baseAgent, baseText, _ := w.pollChat()
 	if _, err := w.send(prompt); err != nil {
-		return err
+		return nil, err
 	}
 
 	sentStart := time.Now()
@@ -59,7 +60,7 @@ func (w *Worker) ChatStream(ctx context.Context, cookies map[string]string, prom
 	for time.Now().Before(firstDeadline) {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		default:
 		}
 		w.pause(60 * time.Millisecond)
@@ -68,7 +69,7 @@ func (w *Worker) ChatStream(ctx context.Context, cookies map[string]string, prom
 			if time.Since(sentStart) > 14*time.Second {
 				tail, _ := w.page.JSString(`document.body.innerText.slice(-500)`)
 				if strings.Contains(tail, "Still sending") || strings.Contains(tail, "Connecting...") {
-					return genError("cloud VM connection timed out (Still sending)")
+					return nil, genError("cloud VM connection timed out (Still sending)")
 				}
 			}
 			continue
@@ -80,7 +81,7 @@ func (w *Worker) ChatStream(ctx context.Context, cookies map[string]string, prom
 		if delta != "" {
 			sent = cur
 			if err := emit(delta); err != nil {
-				return err
+				return nil, err
 			}
 			last = cur
 			gotFirst = true
@@ -88,13 +89,13 @@ func (w *Worker) ChatStream(ctx context.Context, cookies map[string]string, prom
 		}
 	}
 	if !gotFirst {
-		return genError("timed out waiting for the assistant's first token")
+		return nil, genError("timed out waiting for the assistant's first token")
 	}
 
 	for time.Now().Before(deadline) && w.page.context().Err() == nil {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		default:
 		}
 		w.pause(60 * time.Millisecond)
@@ -110,7 +111,7 @@ func (w *Worker) ChatStream(ctx context.Context, cookies map[string]string, prom
 			if delta != "" {
 				sent = cur
 				if err := emit(delta); err != nil {
-					return err
+					return nil, err
 				}
 			}
 			last = cur
@@ -118,9 +119,9 @@ func (w *Worker) ChatStream(ctx context.Context, cookies map[string]string, prom
 		} else {
 			stable++
 			if !hasStop && stable >= 3 {
-				return nil
+				return w.captureChatFiles(ctx), nil
 			}
 		}
 	}
-	return genError("timed out waiting for the assistant reply")
+	return nil, genError("timed out waiting for the assistant reply")
 }

@@ -44,6 +44,7 @@ type Config struct {
 	RefImageLocalFiles        bool
 	RefImagePrivateFetch      bool
 	ToolProtocol              bool
+	ChatFiles                 bool
 	KeepaliveDisabledAccounts bool
 
 	// RepoURL is the GitHub repository used by the update panel.
@@ -141,6 +142,7 @@ func FromEnv(base string) *Config {
 		RefImageLocalFiles:        getBool("MUSE2API_REF_IMAGE_LOCAL_FILES", false),
 		RefImagePrivateFetch:      getBool("MUSE2API_REF_IMAGE_PRIVATE_FETCH", false),
 		ToolProtocol:              getBool("MUSE2API_TOOL_PROTOCOL", false),
+		ChatFiles:                 getBool("MUSE2API_CHAT_FILES", true),
 		KeepaliveDisabledAccounts: getBool("MUSE2API_KEEPALIVE_DISABLED_ACCOUNTS", false),
 		RepoURL:                   strings.TrimSpace(get("MUSE2API_REPO", "")),
 		RepoBranch:                get("MUSE2API_REPO_BRANCH", "main"),

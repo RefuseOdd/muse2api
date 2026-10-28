@@ -145,6 +145,8 @@ Streaming uses standard SSE chunks and terminates with `data: [DONE]`.
 
 Multimodal messages are supported: `image_url` content parts (data URLs or public URLs, up to four images with the same 10 MiB/24 MiB limits as reference images) are uploaded into the muse.ai composer before the prompt is sent.
 
+Files that muse creates in its VM and shares in the reply are captured automatically: they are downloaded and saved to the media library, and the assistant reply gains an `Attached files: [name](/v1/media/...)` line with working download links. Up to four files per reply, 100 MiB each; disable with `MUSE2API_CHAT_FILES=0`.
+
 ```bash
 curl -X POST http://localhost:18610/v1/chat/completions \
   -H "Authorization: Bearer m2a_your_key" \

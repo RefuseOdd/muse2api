@@ -97,6 +97,17 @@ func (s *Server) prepareChatImages(w http.ResponseWriter, r *http.Request, messa
 	return prepared, true
 }
 
+func (s *Server) attachmentNote(files []engine.ChatFile) string {
+	if len(files) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(files))
+	for _, f := range files {
+		parts = append(parts, fmt.Sprintf("[%s](%s)", f.Name, s.cfg.MediaURL(f.Filename)))
+	}
+	return "\n\nAttached files: " + strings.Join(parts, " ")
+}
+
 func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	var req ChatRequest
 	if err := decodeJSONBody(w, r, &req, 64<<20); err != nil {
@@ -146,22 +157,27 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var streamErr error
+		var chatFiles []engine.ChatFile
 		if toolNote == "" {
-			streamErr = s.StreamChat(r.Context(), prompt, chatImages, timeoutDuration, func(chunk string) error {
+			chatFiles, streamErr = s.StreamChat(r.Context(), prompt, chatImages, timeoutDuration, func(chunk string) error {
 				return paceText(chunk, func(piece string) error {
 					return writeAndFlush(w, sseData(chatChunk(cid, created, model, map[string]any{"content": piece}, nil)))
 				})
 			})
 			if streamErr == nil {
+				if note := s.attachmentNote(chatFiles); note != "" {
+					_ = writeAndFlush(w, sseData(chatChunk(cid, created, model, map[string]any{"content": note}, nil)))
+				}
 				_ = writeAndFlush(w, sseData(chatChunk(cid, created, model, map[string]any{}, "stop")))
 			}
 		} else {
 			var buf strings.Builder
-			streamErr = s.StreamChat(r.Context(), prompt, chatImages, timeoutDuration, func(chunk string) error {
+			chatFiles, streamErr = s.StreamChat(r.Context(), prompt, chatImages, timeoutDuration, func(chunk string) error {
 				buf.WriteString(chunk)
 				return nil
 			})
 			if streamErr == nil {
+				buf.WriteString(s.attachmentNote(chatFiles))
 				calls, rest := parseToolCalls(buf.String())
 				if len(calls) > 0 {
 					if rest != "" {
@@ -227,7 +243,7 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var full strings.Builder
-	err := s.StreamChat(r.Context(), prompt, chatImages, timeoutDuration, func(chunk string) error {
+	chatFiles, err := s.StreamChat(r.Context(), prompt, chatImages, timeoutDuration, func(chunk string) error {
 		full.WriteString(chunk)
 		return nil
 	})
@@ -236,7 +252,7 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	usage := map[string]any{"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-	text := full.String()
+	text := full.String() + s.attachmentNote(chatFiles)
 	if toolNote != "" {
 		calls, rest := parseToolCalls(text)
 		if len(calls) > 0 {
@@ -381,7 +397,7 @@ func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
 			"part": map[string]any{"type": "output_text", "text": "", "annotations": []any{}},
 		}))
 		var full strings.Builder
-		err := s.StreamChat(r.Context(), prompt, responseImages, timeoutDuration, func(chunk string) error {
+		responseFiles, err := s.StreamChat(r.Context(), prompt, responseImages, timeoutDuration, func(chunk string) error {
 			full.WriteString(chunk)
 			return writeAndFlush(w, sseEvent("response.output_text.delta", map[string]any{
 				"type": "response.output_text.delta", "item_id": mid, "output_index": 0,
@@ -394,7 +410,11 @@ func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		text := full.String()
+		text := full.String() + s.attachmentNote(responseFiles)
+		_ = writeAndFlush(w, sseEvent("response.output_text.delta", map[string]any{
+			"type": "response.output_text.delta", "item_id": mid, "output_index": 0,
+			"content_index": 0, "delta": s.attachmentNote(responseFiles),
+		}))
 		_ = writeAndFlush(w, sseEvent("response.output_text.done", map[string]any{
 			"type": "response.output_text.done", "item_id": mid, "output_index": 0, "content_index": 0, "text": text,
 		}))
@@ -408,7 +428,7 @@ func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var full strings.Builder
-	err := s.StreamChat(r.Context(), prompt, responseImages, timeoutDuration, func(chunk string) error {
+	responseFiles, err := s.StreamChat(r.Context(), prompt, responseImages, timeoutDuration, func(chunk string) error {
 		full.WriteString(chunk)
 		return nil
 	})
@@ -416,5 +436,5 @@ func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, mapGenerationError(err))
 		return
 	}
-	writeJSON(w, 200, envelope("completed", full.String()))
+	writeJSON(w, 200, envelope("completed", full.String()+s.attachmentNote(responseFiles)))
 }
