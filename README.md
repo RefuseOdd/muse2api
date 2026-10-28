@@ -158,39 +158,6 @@ curl -X POST http://localhost:18610/v1/chat/completions \
   }'
 ```
 
-### OpenCode
-
-Add muse2api as a custom provider in `~/.config/opencode/opencode.jsonc`. The `modalities` block is required — without it OpenCode strips image parts before sending:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "provider": {
-    "muse2api": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "Muse2API",
-      "options": {
-        "baseURL": "http://localhost:18610/v1",
-        "apiKey": "m2a_your_key"
-      },
-      "models": {
-        "muse-spark": {
-          "name": "Muse Spark",
-          "attachment": true,
-          "tool_call": false,
-          "modalities": {
-            "input": ["text", "image"],
-            "output": ["text"]
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-`tool_call` is set to `false` because muse.ai's assistant does not emit tool-call JSON; use OpenCode's plan/ask mode rather than agent mode. Images attach via paste or drag-drop in the TUI.
-
 ### Responses API
 
 ```bash
@@ -275,6 +242,68 @@ Video tasks are asynchronous. A completed task returns a media URL under `/v1/me
 - API key display, copy and rotation.
 - Extension ZIP download and cookie-helper instructions.
 - Integration docs and an optional update/repository panel.
+
+---
+
+## Using with OpenCode
+
+[OpenCode](https://opencode.ai) works with muse2api as a custom OpenAI-compatible provider: chat, code Q&A and image understanding all work through it. Agentic tool calling does not (see below).
+
+### Configuration
+
+OpenCode reads config from `~/.config/opencode/opencode.jsonc` (global) or an `opencode.jsonc` in the project directory (project-level overrides global). Add:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "muse2api": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Muse2API",
+      "options": {
+        "baseURL": "http://localhost:18610/v1",
+        "apiKey": "m2a_your_key"
+      },
+      "models": {
+        "muse-spark": {
+          "name": "Muse Spark",
+          "attachment": true,
+          "tool_call": false,
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Adapt for your deployment:
+
+- **`baseURL`** — `http://your-server:18610/v1` for a remote or Docker deployment; `/v1` must be kept as the path suffix.
+- **`apiKey`** — the service key shown at the top of the admin console (also in the server's `.env` as `MUSE2API_KEY`). Use `{env:MUSE2API_KEY}` instead of a literal to read it from the environment — note that OpenCode only sees environment variables of the terminal it launches from.
+- **`modalities`** — required. OpenCode drops image content parts unless the model declares `image` input here; the error to look for is *"this model does not support image input"*.
+- **`tool_call: false`** — honest default: muse.ai's assistant does not emit tool-call JSON, so agent/build modes cannot work against it. OpenCode will not send tools it knows the model cannot use.
+
+Restart OpenCode after changing the config; it is only read at startup.
+
+### Usage
+
+- `/models` → **muse2api** → **Muse Spark**, then switch to the **plan** agent (Tab). Paste (Ctrl+V) or drag-drop images straight into the input; text files attach with `@`.
+- One-off commands: `opencode run -m muse2api/muse-spark --agent plan "..."` (`-c` continues the last session, text-file `-f` attachments work).
+- Known quirk in OpenCode 1.19.x: `opencode run --file image.png` mislabels binary images as `text/plain`, so CLI-attached images do not reach the model. Use TUI paste/drag-drop or the `opencode serve` HTTP API for images; this is an OpenCode issue, not a muse2api one.
+
+### What works / what does not
+
+| Capability | Status |
+|---|---|
+| Chat, code explanation, review, planning | Works |
+| Image understanding (paste/drag into TUI) | Works |
+| Tool calling / file edits / shell commands | Not possible — muse.ai refuses structured tool calls; use plan mode and apply changes yourself, or pair with a tool-capable model for the build step |
+
+Image and video generation are outside OpenCode's chat flow; call `/v1/images/*` and `/v1/videos` directly (curl, the admin playground) or use a client that speaks those endpoints.
 
 ---
 
