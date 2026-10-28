@@ -1,0 +1,29 @@
+# Binaries and build output
+/muse2api
+/muse2api.exe
+/dist/
+*.test
+*.out
+coverage.*
+
+# Local configuration and secrets
+.env
+.env.local
+
+# Runtime data (never commit account cookies)
+/data/accounts.json
+/data/tasks.json
+/data/.installed_sha
+/data/chromium.log
+/data/debug-*.json
+/data/downloads/
+/data/media/*
+!/data/media/.gitkeep
+
+# Local browser profiles
+/*-profiles/
+/muse2api-profiles/
+
+# OS noise
+.DS_Store
+Thumbs.db

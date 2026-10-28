@@ -1,0 +1,9 @@
+.git
+upstream
+data/accounts.json
+data/tasks.json
+data/media/*
+data/downloads
+*.exe
+*.test
+.env

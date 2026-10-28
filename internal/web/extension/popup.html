@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Muse2API Cookie Import</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    width: 380px;
+    margin: 0;
+    padding: 16px 18px 18px;
+    background: #0d1117;
+    color: #e6edf3;
+    font: 13px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  h1 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 3px;
+    font-size: 15px;
+  }
+  h1 .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4f8cff;
+  }
+  .sub {
+    margin: 0 0 12px;
+    color: #8b949e;
+    font-size: 11.5px;
+  }
+  label {
+    display: block;
+    margin: 11px 0 4px;
+    color: #8b949e;
+    font-size: 11.5px;
+  }
+  input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #30363d;
+    border-radius: 7px;
+    background: #161b22;
+    color: #e6edf3;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 12.5px;
+  }
+  input:focus {
+    outline: none;
+    border-color: #4f8cff;
+  }
+  button {
+    width: 100%;
+    margin-top: 16px;
+    padding: 11px;
+    border: 0;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #4f8cff, #3d7bf0);
+    color: #fff;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:disabled { opacity: .55; cursor: default; filter: none; }
+  .steps {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    background: #161b22;
+    color: #8b949e;
+    font-size: 11.5px;
+    line-height: 1.75;
+  }
+  .steps b { color: #e6edf3; }
+  .steps a { color: #4f8cff; }
+  #log {
+    display: none;
+    margin-top: 14px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #log.show { display: block; }
+  .ok { color: #3fb950; }
+  .bad { color: #f85149; }
+  .warn { color: #d29922; }
+  .foot {
+    margin-top: 14px;
+    padding-top: 11px;
+    border-top: 1px solid #21262d;
+    color: #6e7681;
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #161b22;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+  <h1><span class="dot"></span>Muse2API Cookie Import</h1>
+  <p class="sub">Copy the muse.ai login session from this browser to your muse2api service in one click.</p>
+
+  <label for="base">Service URL (BASE URL)</label>
+  <input id="base" type="text" placeholder="http://your-server-ip:18610" spellcheck="false" autocomplete="off">
+
+  <label for="key">API Key</label>
+  <input id="key" type="text" placeholder="m2a_..." spellcheck="false" autocomplete="off">
+
+  <label for="label">Account label (optional)</label>
+  <input id="label" type="text" placeholder="e.g. muse-main" spellcheck="false" autocomplete="off">
+
+  <button id="go" type="button">Read and import</button>
+
+  <div class="steps">
+    <b>Before you start, check two things:</b><br>
+    1. You are logged in to <a href="https://muse.ai/" target="_blank" rel="noreferrer">muse.ai</a>
+    in <b>this browser</b> and can see the chat interface.<br>
+    2. The service URL and API Key above are filled in. You can copy both from the top of the
+    "Account Pool" tab on the muse2api admin page.
+  </div>
+
+  <div id="log" role="status" aria-live="polite"></div>
+
+  <div class="foot">
+    This extension does one thing: it reads muse.ai cookies with the browser's
+    <code>chrome.cookies</code> API (including the httpOnly ones) and posts them to the
+    service URL you enter. Nothing is collected or sent to any third-party server.
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

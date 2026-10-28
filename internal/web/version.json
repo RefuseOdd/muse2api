@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "updated_at": "2026-10-27",
+  "repo": "",
+  "highlights": [
+    "Full Go rewrite: a single self-contained binary with an embedded admin console and browser extension.",
+    "Zero external Go dependencies, including a built-in Chrome DevTools Protocol WebSocket client.",
+    "OpenAI-compatible chat, Responses, image generation/editing and asynchronous video APIs.",
+    "Multi-account browser isolation, account affinity, automatic failover and 15-minute keepalive.",
+    "Reference images support up to four ordered inputs with public-URL safety checks by default.",
+    "Asynchronous image tasks with idempotency keys, queue admission limits and restart recovery.",
+    "All user-facing text, prompts, documentation and tooling are in English."
+  ],
+  "highlights_en": [
+    "Full Go rewrite: a single self-contained binary with an embedded admin console and browser extension.",
+    "Zero external Go dependencies, including a built-in Chrome DevTools Protocol WebSocket client.",
+    "OpenAI-compatible chat, Responses, image generation/editing and asynchronous video APIs.",
+    "Multi-account browser isolation, account affinity, automatic failover and 15-minute keepalive.",
+    "Reference images support up to four ordered inputs with public-URL safety checks by default.",
+    "Asynchronous image tasks with idempotency keys, queue admission limits and restart recovery.",
+    "All user-facing text, prompts, documentation and tooling are in English."
+  ]
+}

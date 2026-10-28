@@ -1,0 +1,23 @@
+[
+  {
+    "id": "example_acc_01",
+    "label": "demo-account-01",
+    "created_at": 1790140000,
+    "last_used_at": 1790140000,
+    "last_status": "ok",
+    "last_error": null,
+    "enabled": true,
+    "cookies": {
+      "hatch_sess": "your_hatch_sess_here",
+      "hatch_vml": "your_hatch_vml_here"
+    },
+    "cookies_exp": {
+      "hatch_sess": 1792712800,
+      "hatch_vml": 1790312800
+    },
+    "expires_at": 1790312800,
+    "plan": "Free plan",
+    "extra_left": "2B tokens left",
+    "weekly_used_pct": 0
+  }
+]

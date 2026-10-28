@@ -1,0 +1,2467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%234f8cff'/%3E%3C/svg%3E">
+<title>muse2api · Admin Console</title>
+<style>
+  :root{
+    --bg:#0a0e17; --bg2:#0e1421; --panel:#121a2b; --panel2:#0f1626;
+    --line:#20293d; --line2:#2b3550; --text:#e7eaf3; --muted:#8590a8;
+    --accent:#4f8cff; --accent2:#2563eb; --ok:#34d399; --bad:#f87171;
+    --warn:#fbbf24; --purple:#a78bfa; --radius:12px;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;min-height:100vh;color:var(--text);
+    background:radial-gradient(1200px 600px at 15% -10%,#152140 0%,var(--bg) 55%) no-repeat,var(--bg);
+    font:14px/1.6 "Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  }
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,kbd,pre,.mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Cascadia Mono","Liberation Mono",monospace}
+  .muted{color:var(--muted)}
+
+  /* ---------------- header ---------------- */
+  header{position:sticky;top:0;z-index:30;backdrop-filter:blur(14px);background:rgba(10,14,23,.86);border-bottom:1px solid var(--line)}
+  .hwrap{max-width:1280px;margin:0 auto;padding:12px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:650;font-size:17px;letter-spacing:.2px;flex-wrap:wrap}
+  .logo .dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));box-shadow:0 0 14px rgba(79,140,255,.8);flex:0 0 auto}
+  .logo small{color:var(--muted);font-weight:400;font-size:12px;margin-left:2px}
+  .pills{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;align-items:center}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 11px;border-radius:999px;
+    background:var(--panel);border:1px solid var(--line);color:var(--muted);white-space:nowrap
+  }
+  .pill b{color:var(--text);font-weight:600}
+  .pill .led{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+  .pill.on .led{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .pill.off .led{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+  .pill.warn .led{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+  .pill.link{border-color:var(--line2);color:var(--text);cursor:pointer;font-family:inherit}
+  .pill.link:hover{border-color:var(--accent);text-decoration:none}
+  .pill.alert{border-color:rgba(251,191,36,.8);background:rgba(251,191,36,.14);color:var(--warn);animation:pulse 1.8s infinite}
+  .keybox{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:4px 6px 4px 11px}
+  .keybox input{background:transparent;border:0;color:var(--text);outline:none;width:200px;font-size:12.5px;font-family:ui-monospace,monospace;padding:3px 0}
+  .keybox .lbl{font-size:11.5px;color:var(--muted);white-space:nowrap;padding-left:2px;margin:0;font-weight:400}
+  .keybox.ok{border-color:rgba(52,211,153,.5)}
+  .keybox.ok .lbl{color:var(--ok)}
+  .keybox.miss{border-color:rgba(251,191,36,.65);box-shadow:0 0 0 3px rgba(251,191,36,.1)}
+  .keybox.miss .lbl{color:var(--warn)}
+
+  /* ---------------- layout ---------------- */
+  main{max-width:1280px;margin:0 auto;padding:22px}
+  nav.tabs{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  nav.tabs button{
+    background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);
+    padding:10px 15px;font-size:14px;cursor:pointer;border-radius:8px 8px 0 0;transition:.15s;font-family:inherit
+  }
+  nav.tabs button:hover{color:var(--text);background:rgba(255,255,255,.03)}
+  nav.tabs button.active{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+  .tab{display:none}
+  .tab.active{display:block;animation:fade .18s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  /* ---------------- cards ---------------- */
+  .card{background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+  .card>h3{margin:0 0 4px;font-size:14.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card>h3 .tag{font-size:11px;font-weight:500;color:var(--muted);background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
+  .card.accent{border-color:rgba(79,140,255,.4)}
+  .card.good{border-color:rgba(52,211,153,.45)}
+  .hint{color:var(--muted);font-size:12.5px;margin:2px 0 12px;line-height:1.7}
+  .hint code,td code,li code{background:var(--bg2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px;color:#9fc0ff}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+  .row>div{flex:1;min-width:180px}
+  .copyline{display:flex;gap:7px;align-items:center}
+  .copyline input{flex:1;min-width:0;font-family:ui-monospace,monospace;font-size:12.5px}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .cardhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+
+  /* ---------------- step lists ---------------- */
+  .stepbox{display:flex;gap:13px;align-items:flex-start;padding:15px 0;border-bottom:1px solid rgba(32,41,61,.6)}
+  .stepbox:last-child{border-bottom:0;padding-bottom:0}
+  .stepbox:first-of-type{padding-top:4px}
+  .stepno{flex:0 0 26px;width:26px;height:26px;border-radius:50%;background:var(--accent2);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:650;margin-top:1px}
+  .btnlike{display:inline-flex;align-items:center;gap:6px;background:var(--accent2);color:#fff;
+    border-radius:9px;padding:9px 16px;font-size:13px;text-decoration:none;transition:.15s;white-space:nowrap}
+  .btnlike:hover{background:#3b82f6;color:#fff;text-decoration:none}
+  .btnlike.ghostlike{background:transparent;border:1px solid var(--line);color:var(--text);padding:7px 13px;font-size:12.5px}
+  .btnlike.ghostlike:hover{background:rgba(255,255,255,.05);border-color:#37415a;color:var(--text)}
+  .olsteps{margin:8px 0 0;padding-left:0;list-style:none;counter-reset:ols}
+  .olsteps>li{position:relative;padding:5px 0 5px 30px;font-size:12.5px;color:var(--muted);line-height:1.8;counter-increment:ols}
+  .olsteps>li::before{content:counter(ols);position:absolute;left:0;top:6px;width:19px;height:19px;border-radius:50%;
+    background:var(--bg2);border:1px solid var(--line);color:var(--text);font-size:11px;font-weight:650;
+    display:flex;align-items:center;justify-content:center}
+  .olsteps>li>b{color:var(--text)}
+  kbd{display:inline-block;background:var(--bg2);border:1px solid var(--line);border-bottom-width:2px;
+    border-radius:5px;padding:1px 7px;font-size:11.5px;color:var(--text);line-height:1.6;white-space:nowrap}
+
+  /* ---------------- stats ---------------- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+  .stat{background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);border:1px solid var(--line);border-radius:var(--radius);padding:15px 17px}
+  .stat .k{color:var(--muted);font-size:12px;margin-bottom:4px}
+  .stat .v{font-size:25px;font-weight:650;letter-spacing:.4px}
+  .stat.g .v{color:var(--ok)}
+  .stat.r .v{color:var(--bad)}
+  .stat.y .v{color:var(--warn)}
+  .stat.b .v{color:var(--accent)}
+
+  /* ---------------- forms ---------------- */
+  label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px}
+  input[type=text],input[type=number],input[type=password],textarea,select{
+    width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--line);border-radius:9px;
+    padding:9px 12px;font-size:13px;outline:none;transition:.15s;font-family:inherit
+  }
+  textarea{font-family:ui-monospace,monospace;resize:vertical;line-height:1.55}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,140,255,.13)}
+  button{
+    background:var(--accent2);color:#fff;border:0;border-radius:9px;padding:9px 16px;
+    font-size:13px;cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap
+  }
+  button:hover{background:#3b82f6}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+  button.ghost:hover{background:rgba(255,255,255,.05);border-color:#37415a}
+  button.danger{background:transparent;border:1px solid rgba(248,113,113,.4);color:var(--bad)}
+  button.danger:hover{background:rgba(248,113,113,.12)}
+  button.mini{padding:3px 9px;font-size:12px;border-radius:7px}
+  button.primary-lg{padding:11px 24px;font-size:13.5px}
+
+  /* ---------------- tables ---------------- */
+  .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{background:var(--bg2);color:var(--muted);font-weight:500;font-size:12px;text-align:left;padding:9px 9px;white-space:nowrap;border-bottom:1px solid var(--line)}
+  td{padding:9px 9px;border-bottom:1px solid rgba(32,41,61,.6);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:rgba(79,140,255,.045)}
+  td.mono{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .ellip{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:3px 9px;border-radius:999px;border:1px solid;white-space:nowrap;line-height:1.5}
+  button.badge{font-family:inherit;cursor:pointer;background:transparent}
+  button.badge:hover{background:rgba(255,255,255,.06)}
+  .badge.ok{color:var(--ok);border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.1)}
+  .badge.bad{color:var(--bad);border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.1)}
+  .badge.warn{color:var(--warn);border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.1)}
+  .badge.mute{color:var(--muted);border-color:var(--line);background:var(--bg2)}
+  .badge.info{color:var(--accent);border-color:rgba(79,140,255,.35);background:rgba(79,140,255,.1)}
+  .sub{font-size:10.5px;color:var(--muted);margin-top:3px;white-space:nowrap}
+  .nowrap{white-space:nowrap}
+  .acts{display:flex;gap:5px;flex-wrap:wrap;min-width:168px}
+  .empty{text-align:center;color:var(--muted);padding:34px 10px;font-size:13px}
+
+  /* ---------------- media ---------------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+  .tile{position:relative;background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;transition:.18s}
+  .tile:hover{border-color:#37415a;transform:translateY(-2px)}
+  .tile.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .tile .check-tag{position:absolute;top:8px;left:8px;z-index:3;display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:rgba(15,23,42,.82);border:1px solid var(--line);cursor:pointer;transition:.15s}
+  .tile .check-tag:hover{border-color:var(--accent);background:rgba(15,23,42,.95)}
+  .tile .check-tag input{width:14px;height:14px;margin:0;cursor:pointer;accent-color:var(--accent)}
+  .tile .thumb{height:150px;background:#060911;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+  .tile .thumb img,.tile .thumb video{width:100%;height:100%;object-fit:contain;display:block}
+  .tile .meta{padding:9px 11px;font-size:11.5px;color:var(--muted)}
+  .tile .meta .nm{font-family:ui-monospace,monospace;color:var(--text);font-size:11px;word-break:break-all}
+  .tile .meta .ac{display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap}
+
+  /* ---------------- results ---------------- */
+  .result{margin-top:14px;padding:14px;background:var(--bg2);border:1px dashed var(--line);border-radius:var(--radius)}
+  .resstatus{font-size:12.5px;color:var(--muted);min-height:20px;display:flex;align-items:center;gap:8px}
+  .result img,.result video{max-width:100%;max-height:420px;border-radius:9px;display:block;margin-top:10px;background:#060911}
+  pre.out{background:#060911;border:1px solid var(--line);border-radius:9px;padding:12px;overflow:auto;max-height:300px;font-size:12px;color:#9fe8c0;margin:10px 0 0;white-space:pre-wrap;word-break:break-word}
+
+  /* ---------------- toasts ---------------- */
+  #toasts{position:fixed;right:20px;bottom:20px;z-index:99;display:flex;flex-direction:column;gap:9px;align-items:flex-end;pointer-events:none}
+  .toast{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:11px 15px;font-size:13px;max-width:380px;box-shadow:0 12px 34px rgba(0,0,0,.55);animation:slide .2s ease;transition:opacity .3s;word-break:break-word}
+  .toast.ok{border-left-color:var(--ok)}
+  .toast.bad{border-left-color:var(--bad)}
+  .toast.warn{border-left-color:var(--warn)}
+  @keyframes slide{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+
+  /* ---------------- docs ---------------- */
+  .doc h4{margin:22px 0 8px;font-size:13.5px;color:var(--text)}
+  .doc h4:first-child{margin-top:0}
+  pre.code{background:#060911;border:1px solid var(--line);border-radius:9px;padding:14px 14px 14px;overflow:auto;font-size:12.5px;line-height:1.65;color:#cfe3ff;position:relative;margin:0;white-space:pre}
+  pre.code.has-cp{padding-top:32px}
+  pre.code code{background:none;border:0;padding:0;color:inherit;font-size:inherit}
+  pre.code .cp{position:absolute;top:7px;right:8px;font-size:11px;padding:3px 9px;background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:6px;cursor:pointer;font-family:inherit}
+  pre.code .cp:hover{color:var(--text);background:var(--bg2)}
+  pre.code.has-cp code{display:block}
+
+  /* ---------------- misc ---------------- */
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .banner{display:flex;align-items:flex-start;gap:13px;background:linear-gradient(90deg,rgba(251,191,36,.14),rgba(251,191,36,.03));
+    border:1px solid rgba(251,191,36,.42);border-radius:var(--radius);padding:15px 18px;margin-bottom:16px;font-size:13.5px;line-height:1.75;flex-wrap:wrap}
+  .banner.info{background:linear-gradient(90deg,rgba(79,140,255,.16),rgba(167,139,250,.05));border-color:rgba(79,140,255,.55)}
+  .banner .ic{font-size:20px;line-height:1.2}
+  .banner .bcontent{flex:1;min-width:240px}
+  .banner b{color:var(--warn)}
+  .banner.info b{color:#60a5fa}
+  .warnbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;
+    background:linear-gradient(90deg,rgba(251,191,36,.16),rgba(251,191,36,.03));
+    border:1px solid rgba(251,191,36,.42);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;line-height:1.7}
+  .warnbar b{color:var(--warn)}
+  .repobox{margin-top:10px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 14px;font-size:12.5px}
+  .repobox ul{margin:4px 0 0 18px;padding:0;color:var(--muted)}
+  .repobox li{margin:2px 0}
+  .commit{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;margin-top:4px}
+  .commit .when{margin-left:auto;color:var(--muted)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(251,191,36,.12)}50%{box-shadow:0 0 0 5px rgba(251,191,36,.04)}}
+  footer{max-width:1280px;margin:18px auto 32px;padding:12px 24px;text-align:center;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+
+  @media (max-width:820px){
+    .hwrap{padding:10px 14px;gap:10px}
+    main{padding:14px}
+    .pills{width:100%;margin-left:0}
+    .keybox{flex:1 1 100%}
+    .keybox input{width:100%;flex:1}
+    .row>div{min-width:100%}
+    .logo small{display:none}
+    nav.tabs button{padding:9px 11px;font-size:13px}
+    .acts{min-width:0}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="logo">
+      <span class="dot"></span>muse2api
+      <small>Muse web quota · OpenAI-compatible gateway</small>
+      <span class="pill" id="verPill" title="Running version"><b id="verTxt">v—</b></span>
+      <button class="ghost mini" id="btnUpdPanel" type="button" title="Check the configured repository for a newer version">⟳ <span id="updTopTxt">Version check</span></button>
+    </div>
+    <div class="pills">
+      <span class="pill" id="pSvc"><span class="led"></span>Service <b>—</b></span>
+      <span class="pill" id="pAcc"><span class="led"></span>Accounts <b>—</b></span>
+      <span class="pill" id="pBr"><span class="led"></span>Browser <b>—</b></span>
+      <form class="keybox" id="keyBox" autocomplete="off" action="#">
+        <label class="lbl" id="keyLbl" for="key">API key required</label>
+        <input id="key" type="password" placeholder="Paste your API key" autocomplete="off" spellcheck="false">
+        <button class="ghost mini" id="btnSaveKey" type="submit">Save</button>
+      </form>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="banner info" id="updateBanner" hidden>
+    <span class="ic">Update</span>
+    <div class="bcontent">
+      <b>A newer muse2api version is available.</b>
+      <span class="badge info" id="updBannerVer" style="margin-left:8px">new version</span>
+      <div class="hint" id="updBannerMsg" style="margin:4px 0 0"></div>
+    </div>
+    <div class="btnrow">
+      <button id="btnBannerUpgrade" type="button">Upgrade and restart</button>
+      <button class="ghost mini" id="btnBannerDetails" type="button">View changes</button>
+      <button class="ghost mini" id="btnBannerDismiss" type="button">Dismiss</button>
+    </div>
+  </div>
+
+  <div class="card" id="repoPanel" hidden>
+    <h3>
+      Version &amp; updates
+      <span class="badge info" id="repoBadge" style="margin-left:auto">Checking…</span>
+    </h3>
+    <div class="hint" id="repoStatusDesc">Comparing the deployed version with the configured repository…</div>
+    <div class="repobox" id="repoCommits"><span class="muted">Loading…</span></div>
+    <div class="btnrow" style="margin-top:12px">
+      <button id="btnRepoPull" type="button">Update from GitHub and restart</button>
+      <button class="ghost" id="btnRepoRecheck" type="button">Check again</button>
+    </div>
+    <div class="hint" style="margin-top:10px">
+      An online upgrade pulls the latest source and asks the service to restart. Depending on how this instance was deployed,
+      the source update may still need a rebuild on the host. The server reports what it did in the message below.
+    </div>
+    <div class="hint" id="upgradeMsg" style="margin:0;color:var(--text)" hidden></div>
+  </div>
+
+  <div class="banner" id="authBanner" hidden>
+    <span class="ic">Key</span>
+    <div class="bcontent">
+      <b>Enter the API key to load data</b>
+      <div class="hint" style="margin:4px 0 0">
+        The API key is this gateway's own access token — it protects your Muse quota.
+        It is <b style="color:var(--text)">not</b> your Muse account password; it is generated when the service is deployed.
+        Paste it into the box at the top right and press <b style="color:var(--text)">Save</b>. The browser remembers it.
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabs" aria-label="Sections">
+    <button class="active" data-tab="pool" type="button">Account Pool</button>
+    <button data-tab="cookie" type="button">Get Cookies</button>
+    <button data-tab="tasks" type="button">Tasks</button>
+    <button data-tab="media" type="button">Media</button>
+    <button data-tab="play" type="button">API Playground</button>
+    <button data-tab="docs" type="button">Docs</button>
+  </nav>
+
+  <!-- ============================== ACCOUNT POOL ============================== -->
+  <section class="tab active" id="tab-pool">
+    <div class="warnbar" id="expWarn" hidden>
+      <span id="expWarnText"></span>
+      <button class="ghost mini" id="btnExpGo" type="button">Get fresh cookies →</button>
+    </div>
+
+    <div class="card accent">
+      <h3>Connection <span class="tag">Plug these two values into downstream clients</span></h3>
+      <p class="hint">The BASE URL is the API prefix; the API key authenticates every request.</p>
+      <div class="row">
+        <div style="flex:3">
+          <label for="inBase">BASE URL</label>
+          <div class="copyline">
+            <input type="text" id="inBase" readonly spellcheck="false">
+            <button class="ghost mini" type="button" data-copy="inBase">Copy</button>
+          </div>
+        </div>
+        <div style="flex:3">
+          <label for="inKey">API key</label>
+          <div class="copyline">
+            <input type="text" id="inKey" readonly spellcheck="false">
+            <button class="ghost mini" id="btnKeyEye" type="button">Show</button>
+            <button class="ghost mini" type="button" data-copy="realKey">Copy</button>
+            <button class="danger mini" id="btnKeyRotate" type="button">Regenerate</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint" style="margin:11px 0 0">
+        Models: <code>muse-spark</code> (chat / code), <code>muse-image</code> (image generation and edits),
+        <code>muse-video</code> (video generation). Full request examples are in the <b>Docs</b> tab.
+      </p>
+    </div>
+
+    <div class="stats">
+      <div class="stat b"><div class="k">Total accounts</div><div class="v" id="sTotal">—</div></div>
+      <div class="stat g"><div class="k">Healthy</div><div class="v" id="sOk">—</div></div>
+      <div class="stat r"><div class="k">Errors</div><div class="v" id="sBad">—</div></div>
+      <div class="stat y"><div class="k">Disabled</div><div class="v" id="sDis">—</div></div>
+      <div class="stat"><div class="k">Media files</div><div class="v" id="sMedia">—</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Add an account <span class="tag">Batch supported</span></h3>
+      <p class="hint">
+        Paste the <b>muse.ai</b> cookie string copied from your browser. Required cookies:
+        <code>hatch_sess</code>, <code>hatch_vml</code>. For batch import, put one account per line in the form
+        <code>label | cookie string</code> (the label may be omitted).
+      </p>
+      <div class="row">
+        <div style="max-width:230px">
+          <label for="newLabel">Label (single import)</label>
+          <input type="text" id="newLabel" placeholder="e.g. muse-main" spellcheck="false">
+        </div>
+        <div style="flex:3">
+          <label for="newCookie">Cookie string</label>
+          <textarea id="newCookie" rows="4" placeholder="hatch_sess=...; hatch_vml=...&#10;or batch:&#10;acc-01 | hatch_sess=...; hatch_vml=...&#10;acc-02 | hatch_sess=...; hatch_vml=..." spellcheck="false"></textarea>
+        </div>
+      </div>
+      <div class="btnrow" style="margin-top:12px">
+        <button class="primary-lg" id="btnImportPool" type="button">Import account</button>
+        <button class="ghost" id="btnClearPool" type="button">Clear</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <h3 style="margin:0">Accounts <span class="tag" id="poolCount">0</span></h3>
+          <span class="badge mute" id="keepaliveBadge" title="Background keepalive status">● Keepalive: —</span>
+        </div>
+        <div class="btnrow">
+          <button class="ghost mini" id="btnPoolRefresh" type="button">Refresh</button>
+          <button class="ghost mini" id="btnKeepaliveAll" type="button">Keep all accounts alive now</button>
+        </div>
+      </div>
+      <p class="hint">
+        The pool rotates across accounts (least recently used first) and refreshes sessions in the background.
+        <b>Test</b> really opens muse.ai and validates the session; <b>Keepalive</b> silently renews the session token.
+      </p>
+      <div class="tblwrap"><table>
+        <thead><tr>
+          <th>Label</th>
+          <th>Account ID</th>
+          <th>Status</th>
+          <th>Expires</th>
+          <th>Quota</th>
+          <th>Enabled</th>
+          <th>Cookie count</th>
+          <th>Last used</th>
+          <th>Notes</th>
+          <th style="min-width:250px">Actions</th>
+        </tr></thead>
+        <tbody id="poolBody"><tr><td colspan="10" class="empty">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </section>
+  <!-- ============================== GET COOKIES ============================== -->
+  <section class="tab" id="tab-cookie">
+    <div class="card good">
+      <h3>Option 1 · Browser extension <span class="tag">Recommended · no command line · all platforms</span></h3>
+      <p class="hint">
+        The extension copies the muse.ai session that is <b>already logged in on your own computer</b> to this server.
+        No Python, no terminal, no commands.
+      </p>
+      <p class="hint">
+        <b>Why an extension?</b> Both required muse.ai cookies are marked <code>httpOnly</code>, so page scripts
+        (typing <code>document.cookie</code> in the F12 console, or a bookmarklet) cannot read them.
+        Only the browser extension <code>cookies</code> API can.
+      </p>
+
+      <div class="stepbox">
+        <div class="stepno">1</div>
+        <div>
+          <b>Download and unzip the extension</b>
+          <p class="hint" style="margin:4px 0 9px">Unzip it into a folder you will keep, for example <code>D:\muse2api-extension</code>.</p>
+          <div class="btnrow">
+            <a class="btnlike" href="/admin/extension" download>Download muse2api-extension.zip</a>
+            <button class="ghost mini" id="btnExtFiles" type="button">What is inside?</button>
+          </div>
+          <span class="hint" id="extFiles" style="display:inline-block;margin:8px 0 0"></span>
+        </div>
+      </div>
+
+      <div class="stepbox">
+        <div class="stepno">2</div>
+        <div>
+          <b>Load the unpacked extension in your browser</b>
+          <p class="hint" style="margin:4px 0 9px">Chrome is shown below; Edge, Brave, Vivaldi and other Chromium browsers work the same way.</p>
+          <ol class="olsteps">
+            <li>Type <code>chrome://extensions</code> in the address bar and press Enter</li>
+            <li>Turn on <b>Developer mode</b> in the top right corner</li>
+            <li>Click <b>Load unpacked</b> in the top left corner</li>
+            <li>Select the <b>folder</b> you unzipped in step 1 (the folder itself, not a single file inside it)</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="stepbox">
+        <div class="stepno">3</div>
+        <div>
+          <b>Log in to muse.ai, then import from the extension popup</b>
+          <p class="hint" style="margin:4px 0 9px">
+            Open <code>https://muse.ai/</code> in that browser and log in until you can see the chat screen.
+            Then click the extension icon in the toolbar, paste the two values below and press the import button.
+          </p>
+          <div class="row">
+            <div style="flex:3">
+              <label for="exBase">BASE URL (paste into the extension)</label>
+              <div class="copyline">
+                <input type="text" id="exBase" readonly spellcheck="false">
+                <button class="ghost mini" type="button" data-copy="exBase">Copy</button>
+              </div>
+            </div>
+            <div style="flex:3">
+              <label for="exKey">API key (paste into the extension)</label>
+              <div class="copyline">
+                <input type="text" id="exKey" readonly spellcheck="false">
+                <button class="ghost mini" type="button" data-copy="exKey">Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stepbox">
+        <div class="stepno">4</div>
+        <div>
+          <b>Check the Account Pool and repeat every ~2 days</b>
+          <p class="hint" style="margin:4px 0 0">
+            The imported account appears in the <b>Account Pool</b> tab. When its status shows
+            <span class="badge bad">Error</span>, <span class="badge bad">Missing core</span>,
+            or the Expires column shows <span class="badge bad">Expired</span>, repeat step 3.
+            Sessions last about two days, so plan to re-import roughly every other day.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Option 2 · Manual copy from the Network panel <span class="tag">No install · fallback</span></h3>
+      <p class="hint">
+        If you do not want to install the extension you can copy the cookie string by hand.
+        Use the <b>Network</b> panel request headers, not the Console — the <code>cookie:</code> request header
+        <b>includes the httpOnly cookies</b> that the Console cannot see.
+      </p>
+      <ol class="olsteps">
+        <li>Open <code>https://muse.ai/</code> in your own browser and log in; stay on the chat screen</li>
+        <li>Press <kbd>F12</kbd> to open developer tools and switch to the <b>Network</b> tab</li>
+        <li>Press <kbd>F5</kbd> to reload the page so the request list fills up</li>
+        <li>Click <b>any muse.ai request</b> in the list (the first one is fine)</li>
+        <li>On the right, open <b>Headers</b> and scroll to <b>Request Headers</b></li>
+        <li>Find the line that starts with <code>cookie:</code> and <b>copy everything after the colon</b> (starting at <code>hatch_sess=</code>)</li>
+        <li>Paste it into the import box below and click Import</li>
+      </ol>
+      <p class="hint" style="margin-top:10px;color:var(--warn)">
+        Make sure you copy the <b>request</b> header, not a response <code>set-cookie</code> header —
+        response headers only contain some of the cookies.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Option 3 · Paste an import or use the built-in helper <span class="tag">Advanced</span></h3>
+      <p class="hint">Already have a cookie string (including one copied in option 2)? Paste it here.</p>
+      <div class="row" style="margin-top:10px">
+        <div style="max-width:230px">
+          <label for="mLabel">Label</label>
+          <input type="text" id="mLabel" placeholder="e.g. acc-01" spellcheck="false">
+        </div>
+        <div style="flex:3">
+          <label for="mCookie">Cookie string</label>
+          <textarea id="mCookie" rows="3" placeholder="hatch_sess=...; hatch_vml=..." spellcheck="false"></textarea>
+        </div>
+      </div>
+      <div class="btnrow" style="margin-top:12px">
+        <button class="primary-lg" id="btnImportManual" type="button">Import account</button>
+      </div>
+
+      <p class="hint" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
+        The binary ships a helper that opens its own browser window, lets you log in to muse.ai, reads the cookies
+        and uploads them here automatically. Run it on a machine that can reach this server:
+      </p>
+      <pre class="code has-cp" id="cmdBox"><button class="cp" id="btnCopyCmd" type="button">Copy</button><code id="cmdText">muse2api cookie-helper --base &lt;BASE-URL&gt; --key &lt;KEY&gt; --label muse-01</code></pre>
+      <p class="hint" style="margin:8px 0 0">
+        The command refreshes automatically once the API key is loaded; <code>--base</code> is this server's URL
+        <b>without</b> the <code>/v1</code> suffix.
+        <a href="/admin/cookie-helper" target="_blank" rel="noopener noreferrer">Read the full usage document</a>
+        or <a href="/admin/cookie-helper?download=1" download>download it</a>.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Cookie lifetimes <span class="tag">Measured</span></h3>
+      <p class="hint" style="margin:0 0 12px">Observed lifetimes of the muse.ai cookies (they differ slightly per account):</p>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Cookie</th><th>Required</th><th>Observed lifetime</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">hatch_sess</td>
+            <td><span class="badge warn">Required</span></td>
+            <td><b style="color:var(--ok)">~30 days</b></td>
+            <td>Main session — decides whether you can log in</td>
+          </tr>
+          <tr>
+            <td class="mono">hatch_vml</td>
+            <td><span class="badge warn">Required</span></td>
+            <td><b style="color:var(--bad)">~2 days</b></td>
+            <td>Short-lived validation token — <b>decides the account lifetime</b></td>
+          </tr>
+          <tr>
+            <td class="mono">hatch_gw</td>
+            <td><span class="badge mute">Optional</span></td>
+            <td><b style="color:var(--ok)">~1 year</b></td>
+            <td>Gateway routing cache, not needed for login</td>
+          </tr>
+          <tr>
+            <td class="mono">hatch_native_auth_device</td>
+            <td><span class="badge mute">Optional</span></td>
+            <td><b style="color:var(--ok)">~30 days</b></td>
+            <td>Device identifier — not a login credential</td>
+          </tr>
+        </tbody>
+      </table></div>
+      <p class="hint" style="margin:12px 0 0;line-height:1.85">
+        <b>How long does an account really live?</b> As long as its earliest-expiring required cookie,
+        which is <code>hatch_vml</code> — about <b>2 days</b>.<br>
+        <b style="color:var(--warn)">That two-day window is not extended by heavy use.</b>
+        The service does read newly issued muse.ai cookies back into the account pool after each generation
+        (so the Expires column keeps updating), but the expiry of the required cookies is
+        <b>not pushed back</b>.<br>
+        <b>So re-import roughly every two days.</b> It takes seconds with the extension.<br>
+        <b>Import several accounts at once:</b> the pool rotates by least-recently-used, so more accounts mean
+        better stability and you can stagger the re-imports (one account a day instead of all of them at once).<br>
+        <b>When must you re-import?</b> When Expires shows <span class="badge bad">Expired</span>, when the status shows
+        <span class="badge bad">Error</span>, or when the <span class="badge bad">Missing core</span> badge appears.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================== TASKS ============================== -->
+  <section class="tab" id="tab-tasks">
+    <div class="card">
+      <div class="cardhead">
+        <div>
+          <h3 style="margin:0 0 4px">Generation tasks <span class="tag" id="taskCount">0</span></h3>
+          <p class="hint" style="margin:0">
+            Image and video jobs. Video jobs are asynchronous: queued → processing → completed / failed.
+            This tab refreshes every 8 seconds while it is open.
+          </p>
+        </div>
+        <div class="btnrow">
+          <button class="ghost mini" id="btnTaskRefresh" type="button">Refresh</button>
+          <button class="danger mini" id="btnTaskClear" type="button">Clear all</button>
+        </div>
+      </div>
+      <div class="tblwrap"><table>
+        <thead><tr>
+          <th>Task ID</th>
+          <th>Type</th>
+          <th>Prompt</th>
+          <th>Status</th>
+          <th>Duration</th>
+          <th>Created</th>
+          <th>Result / error</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="taskBody"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- ============================== MEDIA ============================== -->
+  <section class="tab" id="tab-media">
+    <div class="card">
+      <div class="cardhead">
+        <div>
+          <h3 style="margin:0 0 4px">Media library <span class="tag" id="mediaCount">0</span></h3>
+          <p class="hint" style="margin:0">
+            Every generated image and video that was written to disk. Open or download them, or hand the links to
+            a downstream client.
+          </p>
+        </div>
+        <div class="btnrow">
+          <button class="ghost mini" id="btnMediaRefresh" type="button">Refresh</button>
+          <button class="ghost mini" id="btnSelectAllMedia" type="button">Select all</button>
+          <button class="danger mini" id="btnDelSelectedMedia" type="button" hidden>Delete selected (<span id="selMediaCount">0</span>)</button>
+        </div>
+      </div>
+      <div class="grid" id="mediaGrid"><div class="empty">Loading…</div></div>
+    </div>
+  </section>
+  <!-- ============================== PLAYGROUND ============================== -->
+  <section class="tab" id="tab-play">
+    <div class="card">
+      <h3>Image generation <span class="tag">POST /v1/images/tasks</span></h3>
+      <p class="hint">
+        Submits a real asynchronous image task and polls it every 3 seconds. Images usually come back in 10–30 seconds.
+        The page never resubmits automatically; if polling gives up, check the Tasks tab.
+      </p>
+      <div class="row">
+        <div style="flex:3">
+          <label for="imgPrompt">Prompt</label>
+          <input type="text" id="imgPrompt" value="A shiba inu wearing an astronaut helmet, cyberpunk neon alley" spellcheck="false">
+        </div>
+        <div style="max-width:150px">
+          <label for="imgSize">Aspect ratio</label>
+          <select id="imgSize">
+            <option value="1:1">1:1</option>
+            <option value="16:9">16:9</option>
+            <option value="9:16">9:16</option>
+            <option value="4:3">4:3</option>
+            <option value="3:4">3:4</option>
+          </select>
+        </div>
+      </div>
+      <div class="btnrow" style="margin-top:12px">
+        <button class="primary-lg" id="imgBtn" type="button">Generate image</button>
+      </div>
+      <div class="result" id="imgRes" hidden>
+        <div class="resstatus" id="imgStatus"></div>
+        <div id="imgPreview"></div>
+        <pre class="out" id="imgJson"></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Video generation <span class="tag">POST /v1/videos</span></h3>
+      <p class="hint">
+        Creates an asynchronous video job and polls it every 4 seconds. Video usually finishes in 60–120 seconds.
+      </p>
+      <div class="row">
+        <div style="flex:3">
+          <label for="vidPrompt">Prompt</label>
+          <input type="text" id="vidPrompt" value="An orange kitten walking slowly on green grass, sunny afternoon" spellcheck="false">
+        </div>
+        <div style="max-width:120px">
+          <label for="vidDur">Duration (s)</label>
+          <input type="number" id="vidDur" value="5" min="1" max="30" step="1">
+        </div>
+        <div style="max-width:150px">
+          <label for="vidSize">Aspect ratio</label>
+          <select id="vidSize">
+            <option value="16:9">16:9</option>
+            <option value="9:16">9:16</option>
+            <option value="1:1">1:1</option>
+          </select>
+        </div>
+      </div>
+      <div class="btnrow" style="margin-top:12px">
+        <button class="primary-lg" id="vidBtn" type="button">Generate video</button>
+      </div>
+      <div class="result" id="vidRes" hidden>
+        <div class="resstatus" id="vidStatus"></div>
+        <div id="vidPreview"></div>
+        <pre class="out" id="vidJson"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== DOCS ============================== -->
+  <section class="tab" id="tab-docs">
+    <div class="card doc">
+      <h3>Integration guide</h3>
+      <p class="hint">
+        The gateway speaks the OpenAI wire format, so most clients only need a different <code>base_url</code>
+        and <code>api_key</code>.<br>
+        BASE URL: <code class="js-base">—</code> · model list: <code id="dModels">—</code>
+      </p>
+
+      <h4>1. Models</h4>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Model ID</th><th>Purpose</th><th>Endpoints</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">muse-spark</td>
+            <td>Text and code chat, streaming supported</td>
+            <td class="mono">POST /v1/chat/completions<br>POST /v1/responses</td>
+          </tr>
+          <tr>
+            <td class="mono">muse-image</td>
+            <td>Text-to-image and image editing</td>
+            <td class="mono">POST /v1/images/generations<br>POST /v1/images/edits<br>POST /v1/images/tasks</td>
+          </tr>
+          <tr>
+            <td class="mono">muse-video</td>
+            <td>Text-to-video and image-to-video (asynchronous)</td>
+            <td class="mono">POST /v1/videos<br>GET /v1/videos/{id}</td>
+          </tr>
+        </tbody>
+      </table></div>
+      <p class="hint" style="margin-top:8px">
+        These are the three real Muse capabilities: <b>Muse Spark</b> (language / code), <b>Muse Image</b>
+        (image generation) and <b>Muse Video</b> (video generation). The muse.ai web app routes automatically and has
+        no model selector, so <code>model</code> only exists for downstream compatibility.
+        <b>Model aliases are accepted</b>: common names such as <code>gpt-4o</code>, <code>gpt-5</code>,
+        <code>claude-sonnet-4</code>, <code>deepseek-chat</code> or <code>gemini-2.5-pro</code> are mapped onto the
+        matching capability, and an unknown name is passed through unchanged.
+      </p>
+
+      <h4>2. Setup</h4>
+      <pre class="code has-cp"><button class="cp" type="button">Copy</button><code>export MUSE2API_BASE="http://your-host:18610"
+export MUSE2API_KEY="m2a_your_api_key"</code></pre>
+
+      <h4>3. Chat and code (curl)</h4>
+      <pre class="code has-cp"><button class="cp" type="button">Copy</button><code># Non-streaming
+curl -sS "$MUSE2API_BASE/v1/chat/completions" \
+  -H "Authorization: Bearer $MUSE2API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"muse-spark","messages":[{"role":"user","content":"Write a quicksort in Python"}]}'
+
+# Streaming: add "stream":true. The response is standard SSE
+# ("data: {...}" frames terminated by "data: [DONE]").
+curl -N "$MUSE2API_BASE/v1/chat/completions" \
+  -H "Authorization: Bearer $MUSE2API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"muse-spark","stream":true,"messages":[{"role":"user","content":"Explain async/await"}]}'</code></pre>
+
+      <h4>4. Images (curl)</h4>
+      <pre class="code has-cp"><button class="cp" type="button">Copy</button><code># Synchronous generation
+curl -sS "$MUSE2API_BASE/v1/images/generations" \
+  -H "Authorization: Bearer $MUSE2API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"muse-image","prompt":"A shiba inu in an astronaut helmet","size":"1:1","response_format":"url"}'
+
+# Response
+# {"created":1790148495,"data":[{
+#   "revised_prompt":"A shiba inu in an astronaut helmet",
+#   "url":"http://your-host:18610/v1/media/xxxx.webp",
+#   "size":"1:1","kind":"image","bytes":23860}]}
+#
+# The url is absolute, so downstream clients can render or download it directly.
+# Add "response_format":"b64_json" to receive base64 instead of a link.
+
+# Asynchronous image task (for clients that want a job id)
+curl -sS -X POST "$MUSE2API_BASE/v1/images/tasks" \
+  -H "Authorization: Bearer $MUSE2API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"A shiba inu in an astronaut helmet","size":"1:1","timeout":600}'
+# -> 202 {"id":"img_task_...","status":"queued","progress":0}
+
+curl -sS "$MUSE2API_BASE/v1/images/tasks/&lt;ID&gt;" -H "Authorization: Bearer $MUSE2API_KEY"
+# -> status completed, plus {"created":...,"data":[{"url":"...","kind":"image","bytes":...}]}</code></pre>
+
+      <h4>5. Videos (curl, asynchronous)</h4>
+      <pre class="code has-cp"><button class="cp" type="button">Copy</button><code># 1) Create the job
+curl -sS -X POST "$MUSE2API_BASE/v1/videos" \
+  -H "Authorization: Bearer $MUSE2API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"muse-video","prompt":"An orange kitten walking on grass","duration":5,"size":"16:9"}'
+# -> {"id":"vid_...","status":"queued","progress":0}
+
+# 2) Poll until the status is completed or failed
+curl -sS "$MUSE2API_BASE/v1/videos/&lt;ID&gt;" -H "Authorization: Bearer $MUSE2API_KEY"
+# -> {"status":"completed","url":"/v1/media/xxxx.mp4",
+#     "result":{"url":"http://your-host:18610/v1/media/xxxx.mp4","bytes":1234567}}
+
+# Status values: queued -&gt; processing -&gt; completed | failed.
+# On failure the task carries a human readable "error".</code></pre>
+
+      <h4>6. Python (OpenAI SDK compatible)</h4>
+      <pre class="code has-cp"><button class="cp" type="button">Copy</button><code>import time
+
+import requests
+from openai import OpenAI
+
+BASE = "http://your-host:18610"
+KEY = "m2a_your_api_key"
+
+# point the SDK at this gateway
+client = OpenAI(base_url=BASE + "/v1", api_key=KEY)
+
+# chat
+reply = client.chat.completions.create(
+    model="muse-spark",
+    messages=[{"role": "user", "content": "Write a quicksort in Python"}],
+)
+print(reply.choices[0].message.content)
+
+# streaming
+stream = client.chat.completions.create(
+    model="muse-spark",
+    messages=[{"role": "user", "content": "Explain async/await"}],
+    stream=True,
+)
+for chunk in stream:
+    print(chunk.choices[0].delta.content or "", end="", flush=True)
+
+# images
+image = client.images.generate(
+    model="muse-image",
+    prompt="A shiba inu in an astronaut helmet",
+    size="1:1",
+)
+print(image.data[0].url)
+
+# videos use the native asynchronous endpoint
+headers = {"Authorization": "Bearer " + KEY}
+task = requests.post(
+    BASE + "/v1/videos",
+    headers=headers,
+    json={"prompt": "An orange kitten walking on grass", "duration": 5, "size": "16:9"},
+    timeout=60,
+).json()
+
+while True:
+    state = requests.get(BASE + "/v1/videos/" + task["id"], headers=headers, timeout=60).json()
+    if state.get("status") in ("completed", "failed"):
+        break
+    time.sleep(4)
+
+print(state)</code></pre>
+
+      <h4>7. Admin API</h4>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">GET</td><td class="mono">/healthz</td><td>Liveness probe (public)</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/readyz</td><td>Readiness probe (public)</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/v1/models</td><td>Model list</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/v1/chat/completions</td><td>Chat completions, streaming or not</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/v1/responses</td><td>Responses API</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/v1/images/generations</td><td>Image generation</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/v1/images/edits</td><td>Image editing with reference images</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/v1/images/tasks</td><td>Create an asynchronous image task</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/v1/images/tasks/{id}</td><td>Image task status and result</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/v1/videos</td><td>Create a video job</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/v1/videos/{id}</td><td>Video job status and result</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/v1/media/{name}</td><td>Generated media file (public, no auth)</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/admin/status</td><td>Service overview, pool stats and recent tasks</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/admin/accounts</td><td>Account list with stats</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/accounts</td><td>Add an account (single, batch text or cookie map)</td></tr>
+          <tr><td class="mono">PATCH</td><td class="mono">/admin/accounts/{id}</td><td>Rename or enable / disable an account</td></tr>
+          <tr><td class="mono">DELETE</td><td class="mono">/admin/accounts/{id}</td><td>Delete an account</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/accounts/{id}/test</td><td>Validate the session (refreshes quota too)</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/accounts/{id}/relogin</td><td>Same as test, for compatibility</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/accounts/{id}/cookies</td><td>Replace the cookies of an account</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/accounts/{id}/quota</td><td>Read the remaining quota</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/accounts/{id}/keepalive</td><td>Silently renew one session</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/accounts/keepalive?force=true</td><td>Renew every account now</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/admin/keepalive/status</td><td>Background keepalive state</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/relogin</td><td>Re-login every account</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/quota</td><td>Refresh quota for every account</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/admin/apikey</td><td>Current API key and public URLs</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/apikey/rotate</td><td>Generate a new API key</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/admin/tasks?limit=60</td><td>Recent generation tasks</td></tr>
+          <tr><td class="mono">DELETE</td><td class="mono">/admin/tasks/{id}</td><td>Delete one task record</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/tasks/clear</td><td>Clear task records (body: {"keep":0})</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/admin/media</td><td>Media library listing</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/media/delete</td><td>Bulk delete (body: {"names":[...]})</td></tr>
+          <tr><td class="mono">DELETE</td><td class="mono">/admin/media/{name}</td><td>Delete one media file</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/admin/update/check</td><td>Version check against the configured repo (public)</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/update/upgrade</td><td>Pull the latest source and restart</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/admin/repo/status</td><td>Alias of /admin/update/check</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/repo/pull</td><td>Alias of /admin/update/upgrade</td></tr>
+          <tr><td class="mono">POST</td><td class="mono">/admin/repo/push</td><td>Push local commits to the remote</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/admin/cookie-helper</td><td>Usage document for the built-in helper (public)</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/admin/extension</td><td>Browser extension ZIP (public)</td></tr>
+          <tr><td class="mono">GET</td><td class="mono">/admin/extension/files</td><td>File list of the bundled extension (public)</td></tr>
+        </tbody>
+      </table></div>
+
+      <h4>8. Authentication</h4>
+      <p class="hint" style="margin:0">
+        Every endpoint except <code>/healthz</code>, <code>/readyz</code>, <code>/v1/media/*</code>,
+        <code>/admin/extension*</code>, <code>/admin/cookie-helper</code>, <code>/admin/update/check</code>
+        and the console page itself requires
+        <code>Authorization: Bearer &lt;API key&gt;</code>. The key is the one shown in the Account Pool tab;
+        rotate it there if it leaks. API errors use <code>{"error":{"message","type","param","code"}}</code> for
+        <code>/v1/*</code> and <code>{"detail":"..."}</code> for admin routes.
+      </p>
+
+      <h4>9. Client compatibility</h4>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Client type</th><th>Capability used</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Chat / desktop apps, web UIs, browser extensions</td><td class="mono">POST /v1/chat/completions</td><td><span class="badge ok">Supported</span></td></tr>
+          <tr><td>Streaming output (typewriter effect)</td><td class="mono">stream: true (standard SSE)</td><td><span class="badge ok">Supported</span></td></tr>
+          <tr><td>Code completion and inline assistant plugins</td><td class="mono">POST /v1/chat/completions</td><td><span class="badge ok">Supported</span></td></tr>
+          <tr><td>Translation, summarising and explanation tools</td><td class="mono">POST /v1/chat/completions</td><td><span class="badge ok">Supported</span></td></tr>
+          <tr><td>Image generation clients</td><td class="mono">POST /v1/images/generations</td><td><span class="badge ok">Supported</span></td></tr>
+          <tr><td>Video generation clients</td><td class="mono">POST /v1/videos (async polling)</td><td><span class="badge ok">Supported</span></td></tr>
+          <tr><td>Autonomous tool-calling agents</td><td class="mono">tool_calls / function calling</td><td><span class="badge bad">Not supported</span></td></tr>
+        </tbody>
+      </table></div>
+      <p class="hint" style="margin-top:8px">
+        <b>About the tool-calling limitation:</b> the muse.ai assistant refuses to emit fake tool-call JSON,
+        so <b>autonomous agent</b> modes that depend on <code>tool_calls</code> (reading and writing files, running
+        commands) cannot work. Everything question-and-answer shaped — chat, code, explanations, translation,
+        summaries, images and videos — works. If a client insists on sending a <code>tools</code> array the request
+        still succeeds: the tool declarations are ignored and the model answers as a normal conversation.
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer></footer>
+
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+/* =====================================================================
+ * Small DOM helpers. Everything user supplied is written with
+ * textContent / setAttribute, never with innerHTML.
+ * =================================================================== */
+const $ = (id) => document.getElementById(id);
+
+function appendKids(node, kids){
+  for (const kid of kids){
+    if (kid === null || kid === undefined || kid === false) continue;
+    if (Array.isArray(kid)){ appendKids(node, kid); continue; }
+    node.appendChild(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+}
+
+function el(tag, attrs, ...kids){
+  const node = document.createElement(tag);
+  if (attrs){
+    for (const key in attrs){
+      if (!Object.prototype.hasOwnProperty.call(attrs, key)) continue;
+      const val = attrs[key];
+      if (val === null || val === undefined || val === false) continue;
+      if (key === 'class') node.className = val;
+      else if (key === 'text') node.textContent = String(val);
+      else if (key === 'on'){ for (const ev in val) node.addEventListener(ev, val[ev]); }
+      else if (/^on[a-z]+$/i.test(key) && typeof val === 'function') node.addEventListener(key.slice(2).toLowerCase(), val);
+      else node.setAttribute(key, val === true ? '' : String(val));
+    }
+  }
+  appendKids(node, kids);
+  return node;
+}
+
+function setText(id, value){
+  const node = $(id);
+  if (node) node.textContent = value === null || value === undefined ? '' : String(value);
+}
+
+function badge(label, kind, title){
+  const node = el('span', {class: 'badge ' + (kind || 'mute'), text: label});
+  if (title) node.title = title;
+  return node;
+}
+
+function button(label, title, handler, kind){
+  const node = el('button', {type: 'button', class: 'mini ' + (kind === 'danger' ? 'danger' : 'ghost'), text: label});
+  if (title) node.title = title;
+  if (handler) node.addEventListener('click', handler);
+  return node;
+}
+
+function setPill(id, cls, label, value){
+  const pill = $(id);
+  if (!pill) return;
+  pill.className = 'pill' + (cls ? ' ' + cls : '');
+  pill.replaceChildren(el('span', {class: 'led'}), document.createTextNode(label + ' '), el('b', {text: value}));
+}
+
+/* =====================================================================
+ * Formatting helpers
+ * =================================================================== */
+function fmtBytes(n){
+  if (n === null || n === undefined || n === '') return '—';
+  const v = Number(n);
+  if (!isFinite(v)) return '—';
+  if (v < 1024) return v + ' B';
+  if (v < 1048576) return (v / 1024).toFixed(1) + ' KB';
+  if (v < 1073741824) return (v / 1048576).toFixed(2) + ' MB';
+  return (v / 1073741824).toFixed(2) + ' GB';
+}
+
+function toDate(value){
+  if (value === null || value === undefined || value === '') return null;
+  let date;
+  if (typeof value === 'number' || /^\d{9,13}$/.test(String(value))){
+    const num = Number(value);
+    date = new Date(num > 1e12 ? num : num * 1000);
+  } else {
+    date = new Date(value);
+  }
+  return isNaN(date.getTime()) ? null : date;
+}
+
+function fmtTime(value){
+  const date = toDate(value);
+  if (!date) return value === null || value === undefined || value === '' ? '—' : String(value);
+  const p = (n) => String(n).padStart(2, '0');
+  return date.getFullYear() + '-' + p(date.getMonth() + 1) + '-' + p(date.getDate()) +
+         ' ' + p(date.getHours()) + ':' + p(date.getMinutes()) + ':' + p(date.getSeconds());
+}
+
+function ago(value){
+  if (value === null || value === undefined || value === '' || value === 0) return 'Never';
+  const date = toDate(value);
+  const seconds = date ? Math.floor(Date.now() / 1000 - date.getTime() / 1000) : Number(value);
+  const s = Math.max(0, Math.floor(seconds));
+  if (s < 60) return s + ' s ago';
+  if (s < 3600) return Math.floor(s / 60) + ' min ago';
+  if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+  return Math.floor(s / 86400) + ' d ago';
+}
+
+function until(value){
+  const date = toDate(value);
+  if (!date) return 'unknown';
+  const s = Math.floor(date.getTime() / 1000 - Date.now() / 1000);
+  if (s <= 0) return 'due now';
+  if (s < 60) return 'in ' + s + ' s';
+  if (s < 3600) return 'in ' + Math.floor(s / 60) + ' min';
+  return 'in ' + Math.floor(s / 3600) + ' h ' + Math.floor((s % 3600) / 60) + ' min';
+}
+
+function fmtSecs(value){
+  const n = Number(value);
+  if (!isFinite(n) || value === null || value === undefined || value === '') return '—';
+  if (n < 60) return (n < 10 ? n.toFixed(1) : Math.round(n)) + ' s';
+  return Math.floor(n / 60) + ' m ' + Math.round(n % 60) + ' s';
+}
+
+function versionText(value){
+  if (!value) return '';
+  const v = String(value);
+  return /^v/i.test(v) ? v : 'v' + v;
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/* =====================================================================
+ * Toast + clipboard
+ * =================================================================== */
+function toast(message, kind){
+  const box = $('toasts');
+  if (!box) return;
+  const node = el('div', {class: 'toast ' + (kind || ''), text: message});
+  box.appendChild(node);
+  setTimeout(() => { node.style.opacity = '0'; }, 3600);
+  setTimeout(() => { node.remove(); }, 4050);
+}
+
+async function copyText(value){
+  const text = value === null || value === undefined ? '' : String(value);
+  if (!text){ toast('There is nothing to copy.', 'warn'); return; }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+      toast('Copied to clipboard.', 'ok');
+      return;
+    }
+    throw new Error('clipboard unavailable');
+  } catch (e){
+    // Fallback for plain HTTP pages where the async clipboard API is blocked.
+    const area = el('textarea', {readonly: true, style: 'position:fixed;top:-1000px;left:-1000px;opacity:0'});
+    area.value = text;
+    document.body.appendChild(area);
+    area.select();
+    area.setSelectionRange(0, text.length);
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+    area.remove();
+    toast(ok ? 'Copied to clipboard.' : 'Copy failed — select the text and copy it manually.', ok ? 'ok' : 'warn');
+  }
+}
+
+/* =====================================================================
+ * HTTP layer
+ * =================================================================== */
+const KEY_STORE = 'muse2api_key';
+const DISMISS_STORE = 'muse2api_dismissed_sha';
+const NOTIFY_STORE = 'muse2api_notified_sha';
+
+function lsGet(key){ try { return localStorage.getItem(key) || ''; } catch (e) { return ''; } }
+function lsSet(key, value){ try { localStorage.setItem(key, value); } catch (e) { /* ignore */ } }
+
+let KEY = lsGet(KEY_STORE);
+const urlKey = new URLSearchParams(location.search).get('key');
+if (urlKey){ KEY = urlKey; lsSet(KEY_STORE, KEY); }
+
+const STATUS_HINTS = {
+  400: 'Bad request (HTTP 400). Check the submitted values and try again.',
+  403: 'The server refused the request (HTTP 403). Check the API key and your access permissions.',
+  404: 'Endpoint not found (HTTP 404). The server version may differ — reload the page or update the service.',
+  405: 'Method not allowed (HTTP 405). Reload the page or update the service.',
+  413: 'Payload too large (HTTP 413). Send less data and retry.',
+  429: 'Too many requests (HTTP 429). Wait a moment and retry.',
+  500: 'The server hit an internal error (HTTP 500). Retry shortly and check the server logs.',
+  502: 'The gateway returned an error (HTTP 502).',
+  503: 'The service is temporarily unavailable (HTTP 503). It may be restarting or overloaded — retry shortly.',
+  504: 'Gateway timeout (HTTP 504). The muse.ai server took too long — retry later or raise the proxy timeout.'
+};
+
+function errorText(data){
+  if (!data) return '';
+  if (typeof data === 'string') return data.trim();
+  if (typeof data.detail === 'string' && data.detail.trim()) return data.detail;
+  if (typeof data.message === 'string' && data.message.trim()) return data.message;
+  const err = data.error;
+  if (typeof err === 'string' && err.trim()) return err;
+  if (err && typeof err === 'object' && typeof err.message === 'string' && err.message.trim()) return err.message;
+  return '';
+}
+
+async function api(path, opts){
+  const options = opts || {};
+  const init = {method: options.method || 'GET', cache: 'no-store', headers: Object.assign({Accept: 'application/json'}, options.headers || {})};
+  if (options.body !== undefined && options.body !== null){
+    init.body = options.body;
+    init.headers['Content-Type'] = 'application/json';
+  }
+  if (KEY) init.headers.Authorization = 'Bearer ' + KEY;
+
+  let res;
+  try {
+    res = await fetch(path, init);
+  } catch (e){
+    throw new Error('Cannot reach the server. Check that the service is running and that the URL is correct.');
+  }
+
+  let raw = '';
+  try { raw = await res.text(); } catch (e) { raw = ''; }
+  let data = null;
+  if (raw){ try { data = JSON.parse(raw); } catch (e) { data = null; } }
+
+  if (res.status === 401 && !options.public){
+    setAuth(false);
+    throw new Error('The API key is missing or wrong (HTTP 401). Paste the key in the top bar and press Save.');
+  }
+  if (!options.public) setAuth(true);
+
+  if (!res.ok){
+    let message = errorText(data);
+    // Never surface an HTML error page (an nginx 502 for example) as the message.
+    if (!message || (!data && /^\s*</.test(raw))) message = STATUS_HINTS[res.status] || ('HTTP ' + res.status);
+    throw new Error(message);
+  }
+  return data === null ? {} : data;
+}
+
+/* =====================================================================
+ * Auth state
+ * =================================================================== */
+let authOK = null;
+
+function setAuth(ok){
+  if (authOK === ok) return;
+  authOK = ok;
+  const banner = $('authBanner');
+  const box = $('keyBox');
+  const label = $('keyLbl');
+  if (banner) banner.hidden = !!ok;
+  if (box){
+    box.classList.toggle('ok', !!ok);
+    box.classList.toggle('miss', !ok);
+  }
+  if (label) label.textContent = ok ? '✓ Signed in' : 'API key required';
+}
+
+function saveKey(){
+  KEY = $('key').value.trim();
+  lsSet(KEY_STORE, KEY);
+  if (!KEY){
+    setAuth(false);
+    toast('API key cleared.', 'warn');
+    return;
+  }
+  toast('API key saved in this browser.', 'ok');
+  authOK = null;
+  refreshAll();
+}
+
+/* =====================================================================
+ * Tabs
+ * =================================================================== */
+function goTab(name){
+  const nav = document.querySelector('nav.tabs button[data-tab="' + name + '"]');
+  if (nav) nav.click();
+}
+
+function showTab(name){
+  document.querySelectorAll('nav.tabs button').forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === name));
+  document.querySelectorAll('.tab').forEach((section) => section.classList.toggle('active', section.id === 'tab-' + name));
+  if (name === 'tasks') loadTasks();
+  if (name === 'media') loadMedia();
+  if (name === 'pool') loadPool();
+  if (name === 'cookie') refreshCookieTools();
+}
+
+function tabIsActive(name){
+  const section = $('tab-' + name);
+  return !!section && section.classList.contains('active');
+}
+
+/* =====================================================================
+ * API key + public URLs
+ * =================================================================== */
+let realKey = '';
+let keyShown = false;
+
+function maskKey(key){
+  if (!key) return '';
+  if (key.length <= 14) return key;
+  return key.slice(0, 8) + '••••••••••••' + key.slice(-4);
+}
+
+function renderKey(){
+  const input = $('inKey');
+  if (input) input.value = keyShown ? realKey : maskKey(realKey);
+  const eye = $('btnKeyEye');
+  if (eye) eye.textContent = keyShown ? 'Hide' : 'Show';
+}
+
+function rootOf(base){
+  return String(base || location.origin).replace(/\/v1\/?$/i, '').replace(/\/+$/, '');
+}
+
+function buildCmd(base){
+  return 'muse2api cookie-helper --base ' + rootOf(base) + ' --key ' + (realKey || '<KEY>') + ' --label muse-01';
+}
+
+function applyBase(base){
+  const value = base || (location.origin + '/v1');
+  const root = rootOf(value);
+  const input = $('inBase');
+  if (input) input.value = value;
+  document.querySelectorAll('.js-base').forEach((node) => { node.textContent = value; });
+  const exBase = $('exBase');
+  if (exBase) exBase.value = root;
+  setText('dModels', root + '/v1/models');
+  setText('cmdText', buildCmd(value));
+}
+
+function refreshCookieTools(){
+  applyBase($('inBase').value || (location.origin + '/v1'));
+  const exKey = $('exKey');
+  if (exKey) exKey.value = realKey;
+}
+
+async function loadApikey(){
+  try {
+    const data = await api('/admin/apikey');
+    realKey = data.api_key || '';
+    applyBase(data.base_url || (location.origin + '/v1'));
+    if (data.models_url) setText('dModels', data.models_url);
+    renderKey();
+    const exKey = $('exKey');
+    if (exKey) exKey.value = realKey;
+  } catch (e){
+    applyBase(location.origin + '/v1');
+    renderKey();
+  }
+}
+
+async function rotateKey(){
+  const ok = confirm('Generate a new API key?\n\nThe current key stops working immediately, so every downstream project must be updated or it will receive HTTP 401.');
+  if (!ok) return;
+  const btn = $('btnKeyRotate');
+  if (btn){ btn.disabled = true; }
+  try {
+    const data = await api('/admin/apikey/rotate', {method: 'POST'});
+    realKey = data.api_key || '';
+    KEY = realKey;
+    lsSet(KEY_STORE, KEY);
+    $('key').value = KEY;
+    keyShown = true;
+    renderKey();
+    refreshCookieTools();
+    applyBase($('inBase').value);
+    toast('A new API key is active. This page has been updated.', 'ok');
+  } catch (e){
+    toast('Could not rotate the key: ' + e.message, 'bad');
+  } finally {
+    if (btn){ btn.disabled = false; }
+  }
+}
+
+/* =====================================================================
+ * Account pool
+ * =================================================================== */
+const ESSENTIAL = ['hatch_sess', 'hatch_vml'];
+let accounts = [];
+
+function expiryInfo(account){
+  const ts = account ? account.expires_at : null;
+  if (!ts){
+    return {kind: 'mute', text: 'Unknown', title: 'No expiry recorded yet. Run Test or Keepalive to refresh it.'};
+  }
+  const estimated = !!account.expires_estimated;
+  const exact = estimated
+    ? ' (estimated from the ~2 day hatch_vml lifetime)'
+    : ' (exact hatch_vml expiry)';
+  const left = Number(ts) - Math.floor(Date.now() / 1000);
+  if (left <= 0){
+    return {kind: 'bad', text: 'Expired', title: 'Expired at ' + fmtTime(ts) + exact + '. Re-import this account from Get Cookies.'};
+  }
+  const days = left / 86400;
+  const amount = days >= 1
+    ? (days >= 10 ? Math.round(days) : days.toFixed(1)) + ' d'
+    : Math.max(1, Math.floor(left / 3600)) + ' h';
+  return {
+    kind: days < 1 ? 'bad' : days < 3 ? 'warn' : 'ok',
+    text: (estimated ? '~' : '') + amount + ' left',
+    title: 'Expires at ' + fmtTime(ts) + exact
+  };
+}
+
+function quotaInfo(account){
+  const q = account ? account.quota : null;
+  if (!q || !q.found){
+    return {kind: 'mute', text: 'Not fetched', sub: '', title: 'No quota data yet. Use the Quota action to read it live.'};
+  }
+  const pct = q.weekly_used_pct === null || q.weekly_used_pct === undefined ? null : Number(q.weekly_used_pct);
+  const kind = pct === null ? 'info' : pct < 50 ? 'ok' : pct < 80 ? 'warn' : 'bad';
+  const plan = String(q.plan || '').replace(/\s*plan\s*$/i, '').trim() || 'Unknown plan';
+  const lines = ['Plan: ' + (q.plan || 'unknown')];
+  if (q.weekly_reset) lines.push('Weekly limit reset: ' + q.weekly_reset);
+  if (pct !== null) lines.push('Weekly usage: ' + pct + '% used');
+  if (q.extra_left) lines.push('Extra tokens left: ' + q.extra_left + ' (used ' + (q.extra_used_pct === null || q.extra_used_pct === undefined ? '?' : q.extra_used_pct) + '%)');
+  if (q.extra_expires) lines.push('Extra tokens expire: ' + q.extra_expires);
+  if (q.checked_at) lines.push('Fetched: ' + fmtTime(q.checked_at));
+  const stale = q.checked_at ? (Date.now() / 1000 - Number(q.checked_at)) > 3600 : false;
+  if (stale) lines.push('This quota data is more than an hour old — fetch it again.');
+  const subs = [];
+  if (q.extra_left) subs.push('+' + q.extra_left + ' extra');
+  if (q.checked_at) subs.push((stale ? 'stale · ' : '') + ago(q.checked_at));
+  return {
+    kind: kind,
+    text: pct === null ? plan : plan + ' · ' + pct + '% used',
+    sub: subs.join(' · '),
+    title: lines.join('\n')
+  };
+}
+
+function renderPoolStats(stats){
+  const st = stats || {};
+  const total = st.total !== undefined && st.total !== null ? st.total : accounts.length;
+  const healthy = st.healthy !== undefined && st.healthy !== null ? st.healthy : accounts.filter((a) => a.enabled && a.ok === true).length;
+  const errors = st.error !== undefined && st.error !== null ? st.error : accounts.filter((a) => a.enabled && a.ok === false).length;
+  const disabled = st.disabled !== undefined && st.disabled !== null ? st.disabled : accounts.filter((a) => !a.enabled).length;
+  setText('sTotal', total);
+  setText('sOk', healthy);
+  setText('sBad', errors);
+  setText('sDis', disabled);
+  setText('poolCount', total);
+  setPill('pAcc', Number(total) > 0 ? 'on' : 'off', 'Accounts', String(total));
+}
+
+function renderExpiryWarning(){
+  const bar = $('expWarn');
+  const target = $('expWarnText');
+  if (!bar || !target) return;
+  const now = Math.floor(Date.now() / 1000);
+  const soon = accounts.filter((a) => a.enabled && a.expires_at && (Number(a.expires_at) - now) < 12 * 3600);
+  if (!soon.length){
+    bar.hidden = true;
+    target.replaceChildren();
+    return;
+  }
+  const expired = soon.filter((a) => Number(a.expires_at) <= now);
+  const upcoming = soon.length - expired.length;
+  const names = soon.slice(0, 4).map((a) => a.label || a.id).join(', ') +
+    (soon.length > 4 ? ' and ' + (soon.length - 4) + ' more' : '');
+  const frag = document.createDocumentFragment();
+  if (expired.length){
+    frag.appendChild(el('b', {text: expired.length === 1 ? '1 account has expired.' : expired.length + ' accounts have expired.'}));
+    frag.appendChild(document.createTextNode(
+      (upcoming ? ' Another ' + upcoming + ' expire within 12 hours (' + names + ').' : ' ' + names + '.') +
+      ' Expired accounts cannot generate — re-import them from the Get Cookies tab (about 30 seconds each).'
+    ));
+  } else {
+    frag.appendChild(el('b', {text: names}));
+    frag.appendChild(document.createTextNode(
+      ' expire within 12 hours. muse.ai sessions last about 2 days and usage does not extend them — re-import now to avoid failed generations.'
+    ));
+  }
+  target.replaceChildren(frag);
+  bar.hidden = false;
+}
+
+function poolStatusCell(account){
+  const cell = el('td');
+  if (!account.enabled) cell.appendChild(badge('Disabled', 'mute', 'This account is disabled and will not be used.'));
+  else if (account.ok === true) cell.appendChild(badge('● Healthy', 'ok', 'The last session check succeeded.'));
+  else if (account.ok === false) cell.appendChild(badge('● Error', 'bad', 'The last session check failed. Re-import the cookies.'));
+  else cell.appendChild(badge('○ Untested', 'warn', 'No session check has run yet. Use Test.'));
+  if (account.essential_ok === false){
+    cell.appendChild(document.createTextNode(' '));
+    cell.appendChild(badge('Missing core', 'bad', 'The required cookies (' + ESSENTIAL.join(', ') + ') are missing. Re-import this account.'));
+  }
+  return cell;
+}
+
+function poolRow(account){
+  const row = el('tr');
+
+  row.appendChild(el('td', {class: 'nowrap'}, el('b', {class: 'ellip', title: account.label || '', text: account.label || '(no label)'})));
+  row.appendChild(el('td', {class: 'mono', text: account.id || '—'}));
+  row.appendChild(poolStatusCell(account));
+
+  const exp = expiryInfo(account);
+  row.appendChild(el('td', null, badge(exp.text, exp.kind, exp.title)));
+
+  const quota = quotaInfo(account);
+  const quotaCell = el('td', null, badge(quota.text, quota.kind, quota.title));
+  if (quota.sub) quotaCell.appendChild(el('div', {class: 'sub', text: quota.sub}));
+  row.appendChild(quotaCell);
+
+  row.appendChild(el('td', null, account.enabled ? badge('On', 'ok') : badge('Off', 'mute')));
+  row.appendChild(el('td', {class: 'mono', text: account.cookie_count === null || account.cookie_count === undefined ? '—' : String(account.cookie_count)}));
+  row.appendChild(el('td', {class: 'mono', title: account.last_used ? fmtTime(account.last_used) : 'Never used', text: ago(account.last_used)}));
+  row.appendChild(el('td', null, el('span', {class: 'ellip mono', title: account.note || 'No note', text: account.note || '—'})));
+
+  const actions = el('div', {class: 'acts'});
+  actions.appendChild(button('Test', 'Open muse.ai and validate this session', (ev) => testAccount(account.id, ev.currentTarget)));
+  actions.appendChild(button('Keepalive', 'Silently renew the session token', (ev) => keepaliveOne(account.id, ev.currentTarget)));
+  actions.appendChild(button('Quota', 'Read the remaining quota now', (ev) => readQuota(account.id, ev.currentTarget)));
+  actions.appendChild(button(account.enabled ? 'Disable' : 'Enable', account.enabled ? 'Stop using this account' : 'Start using this account', (ev) => toggleAccount(account, ev.currentTarget)));
+  actions.appendChild(button('Rename', 'Change the account label', () => renameAccount(account)));
+  actions.appendChild(button('Update cookies', 'Paste a fresh cookie string for this account', () => updateCookies(account)));
+  actions.appendChild(button('Delete', 'Delete this account permanently', (ev) => deleteAccount(account, ev.currentTarget), 'danger'));
+  row.appendChild(el('td', null, actions));
+
+  return row;
+}
+
+function renderPool(){
+  const body = $('poolBody');
+  if (!body) return;
+  if (!accounts.length){
+    const message = authOK === false
+      ? 'Enter the API key in the top bar to load the account pool.'
+      : 'No accounts yet. Add one above, or use the Get Cookies tab for a guided import.';
+    body.replaceChildren(el('tr', null, el('td', {colspan: '10', class: 'empty', text: message})));
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  accounts.forEach((account) => frag.appendChild(poolRow(account)));
+  body.replaceChildren(frag);
+}
+
+async function loadPool(){
+  try {
+    const data = await api('/admin/accounts');
+    accounts = Array.isArray(data.accounts) ? data.accounts : [];
+    renderPoolStats(data.stats);
+    renderExpiryWarning();
+    renderPool();
+  } catch (e){
+    accounts = [];
+    const body = $('poolBody');
+    if (body){
+      const message = authOK === false
+        ? 'Enter the API key in the top bar to load the account pool.'
+        : 'Could not load accounts: ' + e.message;
+      body.replaceChildren(el('tr', null, el('td', {colspan: '10', class: 'empty', text: message})));
+    }
+    const bar = $('expWarn');
+    if (bar) bar.hidden = true;
+  }
+}
+
+async function withBusy(node, label, task){
+  if (!node) return task();
+  const previous = node.textContent;
+  node.disabled = true;
+  node.textContent = label;
+  try {
+    return await task();
+  } finally {
+    node.disabled = false;
+    node.textContent = previous;
+  }
+}
+
+async function testAccount(id, node){
+  await withBusy(node, 'Testing…', async () => {
+    toast('Opening muse.ai to validate this session…');
+    try {
+      const result = await api('/admin/accounts/' + encodeURIComponent(id) + '/test', {method: 'POST'});
+      const parts = [result.message || (result.ok ? 'Session is valid.' : 'Session check failed.')];
+      if (result.quota_error) parts.push('quota error: ' + result.quota_error);
+      else if (result.quota && result.quota.weekly_used_pct !== null && result.quota.weekly_used_pct !== undefined){
+        parts.push('weekly usage ' + result.quota.weekly_used_pct + '%');
+      }
+      toast((result.ok ? '✓ ' : '✗ ') + parts.join(' · '), result.ok && !result.quota_error ? 'ok' : 'warn');
+      await loadPool();
+    } catch (e){
+      toast('Test failed: ' + e.message, 'bad');
+    }
+  });
+}
+
+async function keepaliveOne(id, node){
+  await withBusy(node, 'Working…', async () => {
+    try {
+      const result = await api('/admin/accounts/' + encodeURIComponent(id) + '/keepalive', {method: 'POST'});
+      if (result.ok) toast('✓ Session renewed; the new expiry has been saved.', 'ok');
+      else toast('✗ Keepalive failed: ' + (result.error || result.message || 'unknown error'), 'bad');
+      await loadPool();
+    } catch (e){
+      toast('Keepalive failed: ' + e.message, 'bad');
+    }
+  });
+}
+
+async function readQuota(id, node){
+  await withBusy(node, 'Reading…', async () => {
+    try {
+      const quota = await api('/admin/accounts/' + encodeURIComponent(id) + '/quota', {method: 'POST'});
+      if (quota && quota.found){
+        const extra = quota.extra_left ? ', extra tokens left ' + quota.extra_left : '';
+        toast('Quota: ' + (quota.plan || 'unknown plan') + ', weekly usage ' + (quota.weekly_used_pct === null || quota.weekly_used_pct === undefined ? '?' : quota.weekly_used_pct) + '%' + extra, 'ok');
+      } else {
+        toast('No quota data was found in the account settings panel (the page layout may have changed).', 'warn');
+      }
+      await loadPool();
+    } catch (e){
+      toast('Quota lookup failed: ' + e.message, 'bad');
+    }
+  });
+}
+
+async function toggleAccount(account, node){
+  const next = !account.enabled;
+  await withBusy(node, 'Saving…', async () => {
+    try {
+      await api('/admin/accounts/' + encodeURIComponent(account.id), {method: 'PATCH', body: JSON.stringify({enabled: next})});
+      toast(next ? 'Account enabled.' : 'Account disabled.', 'ok');
+      await loadPool();
+    } catch (e){
+      toast('Could not update the account: ' + e.message, 'bad');
+    }
+  });
+}
+
+async function renameAccount(account){
+  const label = prompt('New label for "' + (account.label || account.id) + '":', account.label || '');
+  if (label === null) return;
+  const value = label.trim();
+  if (!value) return;
+  try {
+    await api('/admin/accounts/' + encodeURIComponent(account.id), {method: 'PATCH', body: JSON.stringify({label: value})});
+    toast('Label updated.', 'ok');
+    await loadPool();
+  } catch (e){
+    toast('Rename failed: ' + e.message, 'bad');
+  }
+}
+
+async function updateCookies(account){
+  const value = prompt('Paste the new cookie string for "' + (account.label || account.id) + '":');
+  if (!value || !value.trim()) return;
+  const raw = value.trim();
+  const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const body = lines.length > 1 ? {cookie_header: lines.join(' ')} : {cookie_header: raw};
+  try {
+    const result = await api('/admin/accounts/' + encodeURIComponent(account.id) + '/cookies', {method: 'POST', body: JSON.stringify(body)});
+    toast('Cookies updated (' + (result.cookie_count === undefined ? 'saved' : result.cookie_count + ' cookies') + ').', 'ok');
+    await loadPool();
+  } catch (e){
+    toast('Cookie update failed: ' + e.message, 'bad');
+  }
+}
+
+async function deleteAccount(account, node){
+  const ok = confirm('Delete the account "' + (account.label || account.id) + '"? This cannot be undone.');
+  if (!ok) return;
+  await withBusy(node, 'Deleting…', async () => {
+    try {
+      await api('/admin/accounts/' + encodeURIComponent(account.id), {method: 'DELETE'});
+      toast('Account deleted.', 'ok');
+      await loadPool();
+    } catch (e){
+      toast('Delete failed: ' + e.message, 'bad');
+    }
+  });
+}
+
+async function addAccount(source){
+  const labelInput = source === 'manual' ? $('mLabel') : $('newLabel');
+  const cookieInput = source === 'manual' ? $('mCookie') : $('newCookie');
+  const label = labelInput.value.trim();
+  const raw = cookieInput.value.trim();
+  if (!raw){
+    toast('Paste a cookie string first.', 'warn');
+    return;
+  }
+  const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  let body;
+  if (lines.length > 1) body = {batch: raw};
+  else body = label ? {label: label, cookie_header: raw} : {cookie_header: raw};
+
+  const trigger = $(source === 'manual' ? 'btnImportManual' : 'btnImportPool');
+  await withBusy(trigger, 'Importing…', async () => {
+    try {
+      const result = await api('/admin/accounts', {method: 'POST', body: JSON.stringify(body)});
+      const count = result.count !== undefined ? result.count : (Array.isArray(result.added) ? result.added.length : 1);
+      if (result.warning) toast(result.warning, 'warn');
+      else toast('Imported ' + count + ' account' + (count === 1 ? '' : 's') + '.', 'ok');
+      if (Array.isArray(result.essential_missing) && result.essential_missing.length){
+        toast('Missing required cookies: ' + result.essential_missing.join(', ') + '. Re-copy the full cookie header.', 'warn');
+      }
+      cookieInput.value = '';
+      labelInput.value = '';
+      await loadPool();
+    } catch (e){
+      toast('Import failed: ' + e.message, 'bad');
+    }
+  });
+}
+
+async function keepaliveAll(){
+  const node = $('btnKeepaliveAll');
+  await withBusy(node, 'Working…', async () => {
+    toast('Waking the headless browser to renew every session…', 'warn');
+    try {
+      const result = await api('/admin/accounts/keepalive?force=true', {method: 'POST'});
+      if (result.status === 'busy'){
+        toast('A keepalive run is already in progress. Check the accounts again in a moment.', 'warn');
+      } else {
+        toast('✓ Renewed ' + (result.refreshed_count || 0) + ' account(s), skipped ' + (result.skipped_count || 0) + '.', 'ok');
+      }
+      await loadPool();
+      await loadKeepalive();
+    } catch (e){
+      toast('Keepalive run failed: ' + e.message, 'bad');
+    }
+  });
+}
+
+async function loadKeepalive(){
+  const node = $('keepaliveBadge');
+  if (!node) return;
+  try {
+    const data = await api('/admin/keepalive/status');
+    if (data.running){
+      node.className = 'badge warn';
+      node.textContent = '● Keepalive running';
+    } else if (data.next_run){
+      node.className = 'badge ok';
+      node.textContent = '● Next keepalive ' + until(data.next_run);
+    } else {
+      node.className = 'badge mute';
+      node.textContent = '● Keepalive idle';
+    }
+    const lines = [];
+    if (data.last_run) lines.push('Last run: ' + fmtTime(data.last_run));
+    if (data.next_run) lines.push('Next run: ' + fmtTime(data.next_run));
+    if (data.last_result){
+      const r = data.last_result;
+      if (typeof r === 'string') lines.push('Last result: ' + r);
+      else if (r && typeof r === 'object'){
+        if (r.refreshed_count !== undefined) lines.push('Refreshed ' + r.refreshed_count + ', skipped ' + (r.skipped_count || 0));
+        else lines.push('Last result: ' + JSON.stringify(r).slice(0, 200));
+      }
+    }
+    node.title = lines.length ? lines.join('\n') : 'Background keepalive status';
+  } catch (e){
+    node.className = 'badge mute';
+    node.textContent = '● Keepalive: unknown';
+  }
+}
+
+/* =====================================================================
+ * Tasks
+ * =================================================================== */
+function progressText(value){
+  if (value === null || value === undefined || value === '') return '';
+  const n = Number(value);
+  if (!isFinite(n)) return '';
+  const pct = n > 0 && n <= 1 ? Math.round(n * 100) : Math.round(n);
+  return pct + '%';
+}
+
+function taskStatusKind(status){
+  const s = String(status || '').toLowerCase();
+  if (s === 'completed' || s === 'succeeded') return 'ok';
+  if (s === 'failed' || s === 'error') return 'bad';
+  if (s === 'processing' || s === 'running') return 'info';
+  if (s === 'queued' || s === 'pending') return 'warn';
+  return 'mute';
+}
+
+function taskRow(task){
+  const row = el('tr');
+  const kind = String(task.kind || '').toLowerCase();
+
+  row.appendChild(el('td', {class: 'mono', text: task.id || '—'}));
+  row.appendChild(el('td', null, badge(kind === 'video' ? 'Video' : kind === 'image' ? 'Image' : (task.kind || 'Unknown'), 'info')));
+  row.appendChild(el('td', null, el('span', {class: 'ellip', title: task.prompt || '', text: task.prompt || '—'})));
+
+  const progress = progressText(task.progress);
+  const statusLabel = (task.status || 'unknown') + (progress && taskStatusKind(task.status) === 'info' ? ' · ' + progress : '');
+  row.appendChild(el('td', null, badge(statusLabel, taskStatusKind(task.status), task.account ? 'Account: ' + task.account : '')));
+  row.appendChild(el('td', {class: 'mono', text: fmtSecs(task.elapsed)}));
+  row.appendChild(el('td', {class: 'mono', text: fmtTime(task.created_at)}));
+
+  const resultCell = el('td');
+  const resultUrl = (task.result && task.result.url) || task.url || '';
+  if (resultUrl){
+    resultCell.appendChild(el('a', {href: resultUrl, target: '_blank', rel: 'noopener noreferrer', text: 'Open result'}));
+    const bytes = (task.result && task.result.bytes) || task.bytes || 0;
+    if (bytes) resultCell.appendChild(el('span', {class: 'mono', style: 'margin-left:6px', text: fmtBytes(bytes)}));
+  } else if (task.error){
+    resultCell.appendChild(el('span', {style: 'color:var(--bad)', title: String(task.error), text: String(task.error).slice(0, 160)}));
+  } else {
+    resultCell.appendChild(el('span', {class: 'muted', text: '—'}));
+  }
+  row.appendChild(resultCell);
+
+  const cell = el('td');
+  const remove = el('button', {type: 'button', class: 'mini danger', text: 'Delete'});
+  remove.addEventListener('click', () => deleteTask(task.id));
+  cell.appendChild(remove);
+  row.appendChild(cell);
+
+  return row;
+}
+
+async function loadTasks(){
+  const body = $('taskBody');
+  if (!body) return;
+  try {
+    const data = await api('/admin/tasks?limit=60');
+    const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+    setText('taskCount', tasks.length);
+    if (!tasks.length){
+      body.replaceChildren(el('tr', null, el('td', {colspan: '8', class: 'empty', text: 'No generation tasks yet.'})));
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    tasks.forEach((task) => frag.appendChild(taskRow(task)));
+    body.replaceChildren(frag);
+  } catch (e){
+    const message = authOK === false
+      ? 'Enter the API key in the top bar to load tasks.'
+      : 'Could not load tasks: ' + e.message;
+    body.replaceChildren(el('tr', null, el('td', {colspan: '8', class: 'empty', text: message})));
+  }
+}
+
+async function deleteTask(id){
+  try {
+    await api('/admin/tasks/' + encodeURIComponent(id), {method: 'DELETE'});
+    toast('Task record deleted.', 'ok');
+    await loadTasks();
+  } catch (e){
+    toast('Delete failed: ' + e.message, 'bad');
+  }
+}
+
+async function clearTasks(){
+  const ok = confirm('Clear every task record?\n\nGenerated media files are kept.');
+  if (!ok) return;
+  try {
+    const result = await api('/admin/tasks/clear', {method: 'POST', body: JSON.stringify({keep: 0})});
+    toast('Removed ' + (result.removed || 0) + ' task record(s).', 'ok');
+    await loadTasks();
+  } catch (e){
+    toast('Could not clear tasks: ' + e.message, 'bad');
+  }
+}
+
+/* =====================================================================
+ * Media library
+ * =================================================================== */
+let allMedia = [];
+const selectedMedia = new Set();
+
+function updateMediaSelection(){
+  const count = selectedMedia.size;
+  const total = allMedia.length;
+  setText('selMediaCount', count);
+  const removeBtn = $('btnDelSelectedMedia');
+  if (removeBtn) removeBtn.hidden = count === 0;
+  const allBtn = $('btnSelectAllMedia');
+  if (allBtn) allBtn.textContent = total > 0 && count === total ? 'Clear selection' : 'Select all';
+  document.querySelectorAll('.tile[data-name]').forEach((tile) => {
+    const name = tile.getAttribute('data-name');
+    const selected = selectedMedia.has(name);
+    tile.classList.toggle('selected', selected);
+    const check = tile.querySelector('input.tile-check');
+    if (check) check.checked = selected;
+  });
+}
+
+function toggleMediaSelect(name){
+  if (selectedMedia.has(name)) selectedMedia.delete(name);
+  else selectedMedia.add(name);
+  updateMediaSelection();
+}
+
+function toggleSelectAllMedia(){
+  if (!allMedia.length) return;
+  if (selectedMedia.size === allMedia.length) selectedMedia.clear();
+  else allMedia.forEach((item) => selectedMedia.add(item.name));
+  updateMediaSelection();
+}
+
+function mediaTile(item){
+  const name = item.name || '';
+  const url = item.url || '';
+  const selected = selectedMedia.has(name);
+  const tile = el('div', {class: 'tile' + (selected ? ' selected' : ''), 'data-name': name});
+
+  const check = el('input', {type: 'checkbox', class: 'tile-check'});
+  check.checked = selected;
+  check.addEventListener('change', () => toggleMediaSelect(name));
+  tile.appendChild(el('label', {class: 'check-tag', title: 'Select for bulk actions'}, check));
+
+  const thumb = el('div', {class: 'thumb'});
+  if (String(item.kind || '').toLowerCase() === 'video'){
+    thumb.appendChild(el('video', {src: url, muted: true, playsinline: true, preload: 'metadata'}));
+  } else {
+    thumb.appendChild(el('img', {src: url, loading: 'lazy', alt: name}));
+  }
+  tile.appendChild(thumb);
+
+  const meta = el('div', {class: 'meta'});
+  meta.appendChild(el('div', {class: 'nm', title: name, text: name}));
+  meta.appendChild(el('div', {style: 'margin-top:3px', text: fmtBytes(item.bytes) + ' · ' + fmtTime(item.mtime)}));
+
+  const actions = el('div', {class: 'ac'});
+  actions.appendChild(el('a', {class: 'badge info', href: url, target: '_blank', rel: 'noopener noreferrer', text: 'Open'}));
+  actions.appendChild(el('a', {class: 'badge mute', href: url, download: name, text: 'Download'}));
+  const remove = el('button', {type: 'button', class: 'badge bad', text: 'Delete', title: 'Delete this file permanently'});
+  remove.addEventListener('click', () => deleteSingleMedia(name));
+  actions.appendChild(remove);
+  meta.appendChild(actions);
+
+  tile.appendChild(meta);
+  return tile;
+}
+
+async function loadMedia(){
+  const grid = $('mediaGrid');
+  if (!grid) return;
+  try {
+    const data = await api('/admin/media');
+    const media = Array.isArray(data.media) ? data.media : [];
+    allMedia = media;
+    const valid = new Set(media.map((item) => item.name));
+    Array.from(selectedMedia).forEach((name) => { if (!valid.has(name)) selectedMedia.delete(name); });
+    setText('mediaCount', media.length);
+    setText('sMedia', media.length);
+    if (!media.length){
+      grid.replaceChildren(el('div', {class: 'empty', text: 'No media files yet. Generate an image or a video in the API Playground.'}));
+      updateMediaSelection();
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    media.forEach((item) => frag.appendChild(mediaTile(item)));
+    grid.replaceChildren(frag);
+    updateMediaSelection();
+  } catch (e){
+    const message = authOK === false
+      ? 'Enter the API key in the top bar to load the media library.'
+      : 'Could not load media: ' + e.message;
+    grid.replaceChildren(el('div', {class: 'empty', text: message}));
+  }
+}
+
+async function deleteSingleMedia(name){
+  const ok = confirm('Delete the media file "' + name + '"?\n\nThis cannot be undone.');
+  if (!ok) return;
+  try {
+    await api('/admin/media/' + encodeURIComponent(name), {method: 'DELETE'});
+    selectedMedia.delete(name);
+    toast('File deleted.', 'ok');
+    await loadMedia();
+  } catch (e){
+    toast('Delete failed: ' + e.message, 'bad');
+  }
+}
+
+async function deleteSelectedMedia(){
+  const names = Array.from(selectedMedia);
+  if (!names.length){
+    toast('Select at least one file first.', 'warn');
+    return;
+  }
+  const ok = confirm('Permanently delete ' + names.length + ' selected file(s)?\n\nThis cannot be undone.');
+  if (!ok) return;
+  const btn = $('btnDelSelectedMedia');
+  await withBusy(btn, 'Deleting…', async () => {
+    try {
+      const result = await api('/admin/media/delete', {method: 'POST', body: JSON.stringify({names: names})});
+      toast('Deleted ' + (result.removed || 0) + ' file(s).', 'ok');
+      if (Array.isArray(result.errors) && result.errors.length){
+        toast(result.errors.length + ' file(s) could not be deleted: ' + result.errors.slice(0, 3).join('; '), 'warn');
+      }
+      selectedMedia.clear();
+      await loadMedia();
+    } catch (e){
+      toast('Bulk delete failed: ' + e.message, 'bad');
+    }
+  });
+}
+
+/* =====================================================================
+ * API Playground
+ * =================================================================== */
+function setStatusLine(node, spinner, text){
+  if (!node) return;
+  const kids = [];
+  if (spinner) kids.push(el('span', {class: 'spin'}));
+  kids.push(document.createTextNode(text));
+  node.replaceChildren(...kids);
+}
+
+function renderImageResult(task, startedAt){
+  const item = (task && Array.isArray(task.data) && task.data[0]) ? task.data[0] : {};
+  const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1) + ' s';
+  const status = $('imgStatus');
+  if (status){
+    status.replaceChildren(
+      el('b', {style: 'color:var(--ok)', text: '✓ Image completed'}),
+      el('span', {class: 'mono', style: 'color:var(--muted)', text: elapsed + (item.bytes ? ' · ' + fmtBytes(item.bytes) : '')})
+    );
+  }
+  const preview = $('imgPreview');
+  if (preview){
+    preview.replaceChildren();
+    let src = item.url || '';
+    if (!src && item.b64_json){
+      const mime = item.kind && item.kind !== 'image' ? 'image/' + item.kind : 'image/webp';
+      src = 'data:' + mime + ';base64,' + item.b64_json;
+    }
+    if (src) preview.appendChild(el('img', {src: src, alt: 'Generated image', loading: 'lazy'}));
+  }
+  const json = $('imgJson');
+  if (json) json.textContent = JSON.stringify(task, null, 2);
+}
+
+function renderVideoResult(task, startedAt){
+  const url = (task.result && task.result.url) || task.url || '';
+  const bytes = (task.result && task.result.bytes) || 0;
+  const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1) + ' s';
+  const status = $('vidStatus');
+  if (status){
+    status.replaceChildren(
+      el('b', {style: 'color:var(--ok)', text: '✓ Video completed'}),
+      el('span', {class: 'mono', style: 'color:var(--muted)', text: elapsed + (bytes ? ' · ' + fmtBytes(bytes) : '')})
+    );
+  }
+  const preview = $('vidPreview');
+  if (preview){
+    preview.replaceChildren();
+    if (url) preview.appendChild(el('video', {src: url, controls: true, playsinline: true}));
+  }
+  const json = $('vidJson');
+  if (json) json.textContent = JSON.stringify(task, null, 2);
+}
+
+async function runImage(){
+  const promptInput = $('imgPrompt');
+  const prompt = promptInput.value.trim();
+  if (!prompt){
+    toast('Enter a prompt first.', 'warn');
+    promptInput.focus();
+    return;
+  }
+  const btn = $('imgBtn');
+  const box = $('imgRes');
+  const status = $('imgStatus');
+  const preview = $('imgPreview');
+  const json = $('imgJson');
+
+  box.hidden = false;
+  preview.replaceChildren();
+  json.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  setStatusLine(status, true, 'Submitting the image task…');
+  const startedAt = Date.now();
+
+  try {
+    const size = $('imgSize').value;
+    let task = await api('/v1/images/tasks', {method: 'POST', body: JSON.stringify({prompt: prompt, size: size, timeout: 600})});
+    const id = task && task.id;
+    if (!id) throw new Error('The server did not return a task id.');
+
+    const deadline = Date.now() + 15 * 60 * 1000;
+    let failures = 0;
+    for (;;){
+      const state = String(task.status || '').toLowerCase();
+      if (state === 'completed' || state === 'succeeded') break;
+      if (state === 'failed') throw new Error(task.error || 'Image generation failed.');
+      if (Date.now() >= deadline){
+        throw new Error('Still not finished after 15 minutes. Open the Tasks tab for the result — do not submit the same prompt again.');
+      }
+      const waited = Math.floor((Date.now() - startedAt) / 1000);
+      setStatusLine(status, true, 'Task ' + id + ' · ' + (task.status || 'queued') + ' · waiting ' + waited + ' s');
+      await sleep(3000);
+      try {
+        task = await api('/v1/images/tasks/' + encodeURIComponent(id));
+        failures = 0;
+      } catch (e){
+        failures += 1;
+        if (failures >= 6){
+          throw new Error('Status polling failed 6 times in a row (' + e.message + '). Open the Tasks tab for the result — do not submit the same prompt again.');
+        }
+      }
+    }
+    renderImageResult(task, startedAt);
+    toast('Image generated.', 'ok');
+    loadMedia();
+  } catch (e){
+    box.hidden = false;
+    status.replaceChildren(el('b', {style: 'color:var(--bad)', text: '✗ Image generation failed'}));
+    json.textContent = e.message;
+    toast('Image generation failed: ' + e.message, 'bad');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate image';
+  }
+}
+
+async function runVideo(){
+  const promptInput = $('vidPrompt');
+  const prompt = promptInput.value.trim();
+  if (!prompt){
+    toast('Enter a prompt first.', 'warn');
+    promptInput.focus();
+    return;
+  }
+  const btn = $('vidBtn');
+  const box = $('vidRes');
+  const status = $('vidStatus');
+  const preview = $('vidPreview');
+  const json = $('vidJson');
+
+  box.hidden = false;
+  preview.replaceChildren();
+  json.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  setStatusLine(status, true, 'Creating the video job…');
+  const startedAt = Date.now();
+
+  try {
+    const duration = parseInt($('vidDur').value, 10);
+    const body = {prompt: prompt, size: $('vidSize').value};
+    if (isFinite(duration) && duration > 0) body.duration = duration;
+
+    let task = await api('/v1/videos', {method: 'POST', body: JSON.stringify(body)});
+    const id = task && task.id;
+    if (!id) throw new Error('The server did not return a task id.');
+
+    const deadline = Date.now() + 20 * 60 * 1000;
+    for (;;){
+      const state = String(task.status || '').toLowerCase();
+      if (state === 'completed' || state === 'succeeded') break;
+      if (state === 'failed' || state === 'error') throw new Error(task.error || 'Video generation failed.');
+      if (Date.now() >= deadline){
+        throw new Error('Still not finished after 20 minutes. Open the Tasks tab for the result — do not submit the same prompt again.');
+      }
+      const waited = Math.floor((Date.now() - startedAt) / 1000);
+      setStatusLine(status, true, 'Task ' + id + ' · ' + (task.status || 'queued') + ' · waiting ' + waited + ' s (video usually takes 60–120 s)');
+      await sleep(4000);
+      task = await api('/v1/videos/' + encodeURIComponent(id));
+    }
+    renderVideoResult(task, startedAt);
+    toast('Video generated.', 'ok');
+    loadMedia();
+    if (tabIsActive('tasks')) loadTasks();
+  } catch (e){
+    box.hidden = false;
+    status.replaceChildren(el('b', {style: 'color:var(--bad)', text: '✗ Video generation failed'}));
+    json.textContent = e.message;
+    toast('Video generation failed: ' + e.message, 'bad');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate video';
+  }
+}
+
+/* =====================================================================
+ * Update check, banner and one-click upgrade
+ * =================================================================== */
+let lastUpdate = null;
+let dismissedSha = lsGet(DISMISS_STORE);
+let notifiedSha = lsGet(NOTIFY_STORE);
+
+function setRepoBadge(text, kind){
+  const node = $('repoBadge');
+  if (!node) return;
+  node.className = 'badge ' + (kind || 'info');
+  node.textContent = text;
+}
+
+function setUpgradeEnabled(enabled){
+  ['btnRepoPull', 'btnBannerUpgrade'].forEach((id) => {
+    const node = $(id);
+    if (node) node.disabled = !enabled;
+  });
+}
+
+function toggleRepoPanel(){
+  const panel = $('repoPanel');
+  if (!panel) return;
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden){
+    if (panel.scrollIntoView) panel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    checkUpdates(false);
+  }
+}
+
+function dismissUpdateBanner(){
+  const sha = lastUpdate && lastUpdate.remote_sha ? lastUpdate.remote_sha : '';
+  if (sha){
+    dismissedSha = sha;
+    lsSet(DISMISS_STORE, sha);
+  }
+  const banner = $('updateBanner');
+  if (banner) banner.hidden = true;
+}
+
+function renderCommitList(data){
+  const box = $('repoCommits');
+  if (!box) return;
+  const frag = document.createDocumentFragment();
+  const highlights = Array.isArray(data.highlights_en) && data.highlights_en.length
+    ? data.highlights_en
+    : (Array.isArray(data.highlights) ? data.highlights : []);
+
+  if (highlights.length){
+    frag.appendChild(el('div', null, el('b', {style: 'color:var(--text)', text: 'Highlights'})));
+    const list = el('ul');
+    highlights.forEach((line) => list.appendChild(el('li', {text: line})));
+    frag.appendChild(list);
+  }
+  const commits = Array.isArray(data.recent_commits) ? data.recent_commits.slice(0, 6) : [];
+  if (commits.length){
+    frag.appendChild(el('div', {style: 'margin-top:8px'}, el('b', {style: 'color:var(--text)', text: 'Recent commits'})));
+    const wrap = el('div', {style: 'margin-top:5px;display:flex;flex-direction:column;gap:4px'});
+    commits.forEach((commit) => {
+      wrap.appendChild(el('div', {class: 'commit'},
+        el('a', {href: commit.url || '#', target: '_blank', rel: 'noopener noreferrer', class: 'mono', text: '[' + (commit.sha || '?') + ']'}),
+        el('span', {text: commit.message || ''}),
+        el('span', {class: 'mono when', text: commit.date ? fmtTime(commit.date) : ''})
+      ));
+    });
+    frag.appendChild(wrap);
+  }
+  if (!frag.childNodes.length) frag.appendChild(el('span', {class: 'muted', text: 'No release notes available.'}));
+  box.replaceChildren(frag);
+}
+
+function renderUpdate(data, announce){
+  const localVer = versionText(data.local_version) || 'unknown';
+  const localSha = data.local_sha || '—';
+  if (data.local_version) setText('verTxt', versionText(data.local_version));
+  renderCommitList(data || {});
+
+  if (!data.repo_url){
+    setRepoBadge('Update source is not configured', 'mute');
+    setText('repoStatusDesc', 'Update source is not configured.');
+    setText('updTopTxt', 'Version check');
+    setUpgradeEnabled(false);
+    $('updateBanner').hidden = true;
+    $('btnUpdPanel').classList.remove('alert');
+    return;
+  }
+  setUpgradeEnabled(true);
+
+  const remoteVer = versionText(data.remote_version) || localVer;
+  const remoteSha = data.remote_sha || '—';
+  const desc = $('repoStatusDesc');
+  if (desc){
+    const parts = [];
+    parts.push(document.createTextNode('Deployed: '));
+    parts.push(el('code', {text: localVer}));
+    parts.push(document.createTextNode(' · commit '));
+    parts.push(el('code', {text: localSha}));
+    if (data.local_ts) parts.push(document.createTextNode(' · ' + fmtTime(data.local_ts)));
+    parts.push(el('br'));
+    parts.push(document.createTextNode('Repository: '));
+    parts.push(el('code', {text: remoteVer}));
+    parts.push(document.createTextNode(' · commit '));
+    parts.push(el('code', {text: remoteSha}));
+    if (data.remote_time) parts.push(document.createTextNode(' · ' + fmtTime(data.remote_time)));
+    if (data.checked_at) parts.push(document.createTextNode(' · checked ' + ago(data.checked_at)));
+    desc.replaceChildren.apply(desc, parts);
+  }
+
+  if (data.has_update){
+    setRepoBadge('New version ' + remoteVer + ' (' + (data.remote_sha || 'latest') + ')', 'warn');
+    $('btnUpdPanel').classList.add('alert');
+    setText('updTopTxt', 'Update available (' + (data.remote_sha || remoteVer) + ')');
+    setText('updBannerVer', localVer + ' (' + localSha + ') → ' + remoteVer + ' (' + remoteSha + ')');
+    const msg = $('updBannerMsg');
+    if (msg){
+      msg.replaceChildren(
+        document.createTextNode('Latest commit: '),
+        el('b', {text: data.remote_msg || 'performance and feature updates'}),
+        document.createTextNode(' · the upgrade keeps your configuration and account data.')
+      );
+    }
+    $('updateBanner').hidden = !!(data.remote_sha && dismissedSha === data.remote_sha);
+    if (data.remote_sha && notifiedSha !== data.remote_sha){
+      notifiedSha = data.remote_sha;
+      lsSet(NOTIFY_STORE, notifiedSha);
+      toast('A new version is available: ' + data.remote_sha + ' — ' + (data.remote_msg || 'open the update panel for details'), 'warn');
+    }
+  } else {
+    const upToDate = data.up_to_date !== false;
+    setRepoBadge(upToDate ? '✓ Up to date ' + localVer + ' (' + localSha + ')' : 'No repository information', upToDate ? 'ok' : 'mute');
+    setText('updTopTxt', upToDate ? localVer + ' · up to date' : 'Version check');
+    $('btnUpdPanel').classList.remove('alert');
+    $('updateBanner').hidden = true;
+    if (announce) toast(upToDate ? '✓ This instance is up to date.' : 'Could not read the remote version.', upToDate ? 'ok' : 'warn');
+  }
+}
+
+async function checkUpdates(force){
+  try {
+    const data = await api('/admin/update/check' + (force ? '?force=true' : ''), {public: true});
+    lastUpdate = data || {};
+    renderUpdate(lastUpdate, !!force);
+  } catch (e){
+    setRepoBadge('Check failed', 'mute');
+    setText('repoStatusDesc', 'Could not check for updates: ' + e.message);
+    setText('updTopTxt', 'Version check');
+  }
+}
+
+function waitForRestart(){
+  let tries = 0;
+  const poll = async () => {
+    tries += 1;
+    try {
+      const res = await fetch('/healthz?t=' + Date.now(), {cache: 'no-store'});
+      if (res.ok){
+        location.reload();
+        return;
+      }
+    } catch (e){ /* the service is still restarting */ }
+    if (tries < 30) setTimeout(poll, 1000);
+    else toast('The service did not come back within 30 seconds. Reload the page once it is up.', 'warn');
+  };
+  setTimeout(poll, 2500);
+}
+
+async function upgradeNow(){
+  if (!lastUpdate || !lastUpdate.repo_url){
+    toast('Update source is not configured.', 'warn');
+    return;
+  }
+  const ok = confirm('Pull the latest source from the configured repository and restart the service?\n\nThe API key, the account pool and the generated media are kept.');
+  if (!ok) return;
+
+  const pull = $('btnRepoPull');
+  const banner = $('btnBannerUpgrade');
+  if (pull){ pull.disabled = true; pull.textContent = 'Updating…'; }
+  if (banner){ banner.disabled = true; banner.textContent = 'Updating…'; }
+  const out = $('upgradeMsg');
+
+  try {
+    const result = await api('/admin/update/upgrade', {method: 'POST', body: JSON.stringify({restart: true})});
+    if (out){
+      out.hidden = false;
+      const line = ['✓ ' + (result.message || 'Update finished.')];
+      if (result.via) line.push('via ' + result.via);
+      if (result.status) line.push('status: ' + result.status);
+      out.textContent = line.join(' · ');
+    }
+    toast((result.message || 'Update finished.') + ' The service restarts now; this page reloads when it is back.', 'ok');
+    $('updateBanner').hidden = true;
+    waitForRestart();
+  } catch (e){
+    toast('Online update failed: ' + e.message, 'bad');
+    if (out){
+      out.hidden = false;
+      out.textContent = 'Online update failed: ' + e.message;
+    }
+    if (pull){ pull.disabled = false; pull.textContent = 'Update from GitHub and restart'; }
+    if (banner){ banner.disabled = false; banner.textContent = 'Upgrade and restart'; }
+  }
+}
+
+/* =====================================================================
+ * Service status
+ * =================================================================== */
+async function loadStatus(){
+  try {
+    const data = await api('/admin/status');
+    setPill('pSvc', 'on', 'Service', 'Online');
+    setPill('pBr', data.browser_running ? 'on' : 'off', 'Browser', data.browser_running ? 'Running' : 'Idle');
+    const stats = data.stats || {};
+    const total = stats.total !== undefined && stats.total !== null
+      ? stats.total
+      : (Array.isArray(data.accounts) ? data.accounts.length : 0);
+    setPill('pAcc', Number(total) > 0 ? 'on' : 'off', 'Accounts', String(total));
+    setText('sMedia', data.media_count === undefined || data.media_count === null ? '—' : data.media_count);
+    if (data.base_url){
+      const base = data.base_url;
+      $('inBase').value = base;
+      document.querySelectorAll('.js-base').forEach((node) => { node.textContent = base; });
+      const exBase = $('exBase');
+      if (exBase) exBase.value = rootOf(base);
+      setText('dModels', rootOf(base) + '/v1/models');
+      setText('cmdText', buildCmd(base));
+    }
+  } catch (e){
+    if (authOK === false) setPill('pSvc', 'warn', 'Service', 'Locked');
+    else setPill('pSvc', 'off', 'Service', String(e.message).slice(0, 42));
+    setPill('pBr', '', 'Browser', '—');
+  }
+}
+
+function refreshAll(){
+  loadStatus();
+  loadPool();
+  loadApikey();
+  loadKeepalive();
+  checkUpdates(false);
+}
+
+/* =====================================================================
+ * Extension file list + wiring
+ * =================================================================== */
+async function loadExtensionFiles(){
+  const target = $('extFiles');
+  if (!target) return;
+  target.textContent = 'Reading…';
+  try {
+    const data = await api('/admin/extension/files', {public: true});
+    const files = Array.isArray(data.files) ? data.files : [];
+    if (!files.length){
+      target.textContent = 'The extension directory is empty — check the deployment.';
+      return;
+    }
+    target.replaceChildren(document.createTextNode('Contains ' + files.length + ' file' + (files.length === 1 ? '' : 's') + ': '));
+    files.forEach((name, index) => {
+      if (index) target.appendChild(document.createTextNode(', '));
+      target.appendChild(el('code', {text: name}));
+    });
+  } catch (e){
+    target.textContent = 'Could not read the file list: ' + e.message;
+  }
+}
+
+function init(){
+  $('key').value = KEY;
+  const keyForm = $('keyBox');
+  if (keyForm){
+    keyForm.addEventListener('submit', (ev) => { ev.preventDefault(); saveKey(); });
+  }
+
+  document.querySelectorAll('nav.tabs button').forEach((btn) => {
+    btn.addEventListener('click', () => showTab(btn.dataset.tab));
+  });
+
+  const copySources = {
+    inBase: () => $('inBase').value,
+    realKey: () => realKey,
+    exBase: () => $('exBase').value,
+    exKey: () => $('exKey').value
+  };
+  document.querySelectorAll('[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const source = copySources[btn.dataset.copy];
+      if (source) copyText(source());
+    });
+  });
+
+  $('btnKeyEye').addEventListener('click', () => { keyShown = !keyShown; renderKey(); });
+  $('btnKeyRotate').addEventListener('click', rotateKey);
+  $('btnExpGo').addEventListener('click', () => goTab('cookie'));
+  $('btnImportPool').addEventListener('click', () => addAccount('pool'));
+  $('btnClearPool').addEventListener('click', () => { $('newCookie').value = ''; $('newLabel').value = ''; });
+  $('btnImportManual').addEventListener('click', () => addAccount('manual'));
+  $('btnPoolRefresh').addEventListener('click', loadPool);
+  $('btnKeepaliveAll').addEventListener('click', keepaliveAll);
+  $('btnExtFiles').addEventListener('click', loadExtensionFiles);
+  $('btnCopyCmd').addEventListener('click', () => copyText($('cmdText').textContent));
+  $('btnTaskRefresh').addEventListener('click', loadTasks);
+  $('btnTaskClear').addEventListener('click', clearTasks);
+  $('btnMediaRefresh').addEventListener('click', loadMedia);
+  $('btnSelectAllMedia').addEventListener('click', toggleSelectAllMedia);
+  $('btnDelSelectedMedia').addEventListener('click', deleteSelectedMedia);
+  $('imgBtn').addEventListener('click', runImage);
+  $('vidBtn').addEventListener('click', runVideo);
+  $('btnUpdPanel').addEventListener('click', toggleRepoPanel);
+  $('btnBannerDetails').addEventListener('click', () => {
+    $('repoPanel').hidden = false;
+    if ($('repoPanel').scrollIntoView) $('repoPanel').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  });
+  $('btnBannerDismiss').addEventListener('click', dismissUpdateBanner);
+  $('btnBannerUpgrade').addEventListener('click', upgradeNow);
+  $('btnRepoPull').addEventListener('click', upgradeNow);
+  $('btnRepoRecheck').addEventListener('click', () => checkUpdates(true));
+
+  document.querySelectorAll('pre.code').forEach((pre) => {
+    const btn = pre.querySelector('.cp');
+    const code = pre.querySelector('code');
+    if (!btn || !code) return;
+    btn.addEventListener('click', () => copyText(code.textContent));
+  });
+
+  refreshAll();
+
+  setInterval(() => {
+    if (document.hidden) return;
+    loadStatus();
+    loadPool();
+    loadKeepalive();
+    if (tabIsActive('tasks')) loadTasks();
+  }, 8000);
+
+  setInterval(() => {
+    if (!document.hidden) checkUpdates(false);
+  }, 60000);
+}
+
+init();
+</script>
+</body>
+</html>

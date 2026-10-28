@@ -1,0 +1,21 @@
+services:
+  muse2api:
+    build: .
+    image: muse2api-go:latest
+    container_name: muse2api
+    restart: always
+    ports:
+      - "18610:18610"
+    environment:
+      # Read the key from the host environment or .env; leave empty to auto-generate.
+      - MUSE2API_KEY=${MUSE2API_KEY:-}
+      - MUSE2API_ENV_FILE=/app/data/.env
+      - MUSE2API_PUBLIC_BASE=${MUSE2API_PUBLIC_BASE:-}
+      - MUSE2API_IMAGE_TIMEOUT=240
+      - MUSE2API_VIDEO_TIMEOUT=600
+      - MUSE2API_CHAT_TIMEOUT=300
+      - MUSE2API_CONCURRENCY=${MUSE2API_CONCURRENCY:-2}
+    volumes:
+      # Persist accounts, tasks and generated media.
+      - ./data:/app/data
+    shm_size: "2gb" # Chromium needs enough shared memory for multiple tabs.
